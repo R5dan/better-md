@@ -1,3 +1,5 @@
+from .markdown.custom_markdown import CustomMarkdown
+
 class Symbol:
     styles: 'dict[str, str]' = {}
     classes: 'list[str]' = []
@@ -14,7 +16,9 @@ class Symbol:
     
     def to_md(self):
         if isinstance(self.inner, Symbol):
-            inner_md = self.inner.to_html()
+            inner_md = self.inner.to_md()
         else:
             inner_md = self.inner
+        if isinstance(self.md, CustomMarkdown):
+            return self.md.to_md(inner_md)
         return f"{self.md} {inner_md}"
