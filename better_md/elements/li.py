@@ -4,8 +4,8 @@ from ..markdown import CustomMarkdown
 class MD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):
         if isinstance(parent, OL):
-            return f"1. {" ".join([e.to_md() for e in inner])}"
-        return f"- {inner.to_md()}\n"
+            return f"\n1. {" ".join([e.to_md() for e in inner])}"
+        return f"\n- {" ".join([e.to_md() for e in inner])}"
 
 
 class LI(Symbol):

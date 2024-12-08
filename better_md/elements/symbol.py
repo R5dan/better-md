@@ -71,14 +71,18 @@ class Symbol:
     
     def to_md(self):
         if isinstance(self.md, CustomMarkdown):
-            print(self.children)
             return self.md.to_md(self.children, self, self.parent)
         
         inner_md = " ".join([e.to_md() for e in self.children])
-        return f"{self.md} {inner_md}" + "\n" if self.nl else ""
+        return f"{self.md} {inner_md}" + ("\n" if self.nl else "")
     
     def get_prop(self, prop, default=""):
         return self.props.get(prop, default)
 
     def set_prop(self, prop, value):
         self.props[prop] = value
+
+    def __contains__(self, item):
+        if callable(item):
+            return any(isinstance(e, item) for e in self.children)
+        return item in self.children
