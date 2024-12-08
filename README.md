@@ -2,9 +2,9 @@
 
 ## Todo
 
-- [x] Add basic architecture
-- [ ] Add HTML elelemts
-- [ ] Publish to Pypi
-- [ ] Add innerline support
-- [ ] Add escape chars (\\)
-- [ ] Add other languages
+-   [x] Add basic architecture
+-   [x] Add HTML elelemts
+-   [x] Publish to Pypi
+-   [ ] Add innerline support
+-   [ ] Add escape chars (\\)
+-   [ ] Add other languages
