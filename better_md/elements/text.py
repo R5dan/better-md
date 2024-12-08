@@ -15,9 +15,15 @@ class Text(Symbol):
 
     def __init__(self, text:str, dom = True, **props):
         self.text = text
+        return super().__init__(dom=dom, **props)
 
     def to_html(self):
         return self.text
     
     def to_md(self):
         return self.text
+    
+    def __str__(self):
+        return f"<Text object>{self.text}</Text>"
+
+    __repr__ = __str__
