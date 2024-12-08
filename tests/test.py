@@ -1,80 +1,80 @@
-from better_md import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input
+from Better-MD import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input
 
-# print(H1(inner=[Text("Hi")]).to_html())
-# print(H1(inner=[Text("Hi")]).to_md())
+print(H1(inner=[Text("Hi")]).to_html())
+print(H1(inner=[Text("Hi")]).to_md())
 
 
-# print(
-#     Div(
-#         inner=[Div(
-#             inner=[H1(inner=[Text("Hi this is a H1")])]
-#         ),
-#         A(inner=[Text("Link")], href="https://www.google.com"),
-#         Div(
-#             inner=[
-#                 OL(
-#                     inner=[
-#                         LI(inner=[Text("LI1")]),
-#                         LI(inner=[Text("LI2")]),
-#                         LI(inner=[Text("LI3")])
-#                     ]
-#                 ),
-#                 A(inner=[Text("Link")], href="https://www.google.com")
-#             ]
-#         ),
-#         UL(
-#             inner=[
-#                 LI(inner=[Text("LI1")]),
-#                 LI(inner=[Text("LI2")]),
-#                 LI(inner=[Text("LI3")])
-#             ]
-#         )
-#         ]
-#     ).prepare(None).to_md()
-# )
+print(
+    Div(
+        inner=[Div(
+            inner=[H1(inner=[Text("Hi this is a H1")])]
+        ),
+        A(inner=[Text("Link")], href="https://www.google.com"),
+        Div(
+            inner=[
+                OL(
+                    inner=[
+                        LI(inner=[Text("LI1")]),
+                        LI(inner=[Text("LI2")]),
+                        LI(inner=[Text("LI3")])
+                    ]
+                ),
+                A(inner=[Text("Link")], href="https://www.google.com")
+            ]
+        ),
+        UL(
+            inner=[
+                LI(inner=[Text("LI1")]),
+                LI(inner=[Text("LI2")]),
+                LI(inner=[Text("LI3")])
+            ]
+        )
+        ]
+    ).prepare(None).to_md()
+)
 
 # Bold text
-# print(Strong(inner=[Text("Bold text")]).prepare(None).to_md())  # **Bold text**
+print(Strong(inner=[Text("Bold text")]).prepare(None).to_md())  # **Bold text**
 
-# # Table example
-# print(
-#     Table(
-#         inner=[
-#             Tr(
-#                 inner=[
-#                     Th(inner=[Text("Header 1")]),
-#                     Th(inner=[Text("Header 2")])
-#                 ],
-#                 is_header=True
-#             ),
-#             Tr(
-#                 inner=[
-#                     Td(inner=[Text("Cell 1")]),
-#                     Td(inner=[Text("Cell 2")])
-#                 ]
-#             )
-#         ]
-#     ).prepare(None).to_md()
-# )
-# """
-# |Header 1|Header 2|
-# |---|---|
-# |Cell 1|Cell 2|
-# """
+# Table example
+print(
+    Table(
+        inner=[
+            Tr(
+                inner=[
+                    Th(inner=[Text("Header 1")]),
+                    Th(inner=[Text("Header 2")])
+                ],
+                is_header=True
+            ),
+            Tr(
+                inner=[
+                    Td(inner=[Text("Cell 1")]),
+                    Td(inner=[Text("Cell 2")])
+                ]
+            )
+        ]
+    ).prepare(None).to_md()
+)
+"""
+|Header 1|Header 2|
+|---|---|
+|Cell 1|Cell 2|
+"""
 
-# # Blockquote with formatting
-# print(
-#     Blockquote(
-#         inner=[
-#             Text("A quote with "),
-#             Strong(inner=[Text("bold")]),
-#             Text(" and "),
-#             Em(inner=[Text("italic")]),
-#             Text(" text.")
-#         ]
-#     ).prepare(None).to_md()
-# )
-# > A quote with **bold** and *italic* text.
+# Blockquote with formatting
+print(
+    Blockquote(
+        inner=[
+            Text("A quote with "),
+            Strong(inner=[Text("bold")]),
+            Text(" and "),
+            Em(inner=[Text("italic")]),
+            Text(" text.")
+        ]
+    ).prepare(None).to_md()
+)
+> A quote with **bold** and *italic* text.
 
 # Text input
 print(Input(type="text", placeholder="Enter your name", required=True).prepare(None).to_html())
