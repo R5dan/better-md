@@ -1,10 +1,16 @@
 # Better-md
 
-## Todo
+## Insallation
 
--   [x] Add basic architecture
--   [x] Add HTML elelemts
--   [x] Publish to Pypi
--   [ ] Add innerline support
--   [ ] Add escape chars (\\)
--   [ ] Add other languages
+```bash
+pip install better-md
+```
+
+## Usage
+
+```python
+from better_md import md
+
+html = md.H1("Hello, world!").prepare().to_html()
+md = md.H1("Hello, world!").prepare().to_md()
+```
