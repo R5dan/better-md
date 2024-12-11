@@ -1,4 +1,4 @@
-from Better-MD import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input
+from BetterMD import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input, CustomRst, CustomHTML, CustomMarkdown
 
 print(H1(inner=[Text("Hi")]).to_html())
 print(H1(inner=[Text("Hi")]).to_md())
@@ -37,7 +37,7 @@ print(
 print(Strong(inner=[Text("Bold text")]).prepare(None).to_md())  # **Bold text**
 
 # Table example
-print(
+print("RST",
     Table(
         inner=[
             Tr(
@@ -54,7 +54,7 @@ print(
                 ]
             )
         ]
-    ).prepare(None).to_md()
+    ).prepare(None).to_rst(), sep="\n"
 )
 """
 |Header 1|Header 2|
@@ -74,7 +74,7 @@ print(
         ]
     ).prepare(None).to_md()
 )
-> A quote with **bold** and *italic* text.
+"A quote with **bold** and *italic* text."
 
 # Text input
 print(Input(type="text", placeholder="Enter your name", required=True).prepare(None).to_html())
@@ -91,3 +91,4 @@ print(Input(type="checkbox", name="subscribe", checked=True).prepare(None).to_ht
 # Number input
 print(Input(type="number", min="0", max="100", step="5").prepare(None).to_html())
 # <input type="number" min="0" max="100" step="5" />
+

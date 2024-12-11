@@ -1,16 +1,20 @@
+import typing as t
+
 from ..markdown import CustomMarkdown
 from ..html import CustomHTML
+from ..rst import CustomRst
 
 class Symbol:
     styles: 'dict[str, str]' = {}
     classes: 'list[str]' = []
-    html: 'str'
+    html: 't.Union[str, CustomHTML]' = ""
     props: 'dict[str, str]' = {}
     prop_list: 'list[str]' = []
     vars:'dict[str,str]' = {}
     children:'list[Symbol]' = []
-    md: 'str'
-    parent:'Symbol'
+    md: 't.Union[str, CustomMarkdown]' = ""
+    rst: 't.Union[str, CustomRst]' = ""
+    parent:'Symbol' = None
     prepared:'bool' = False
     nl:'bool' = False
 
@@ -23,8 +27,12 @@ class Symbol:
         self.props = props
         self.dom = dom
         
-    def copy(self, styles:'dict[str,str]'={}, classes:'list[str]'=[], inner:'Symbol'=""):
-        return Symbol(self.styles+styles, self.classes+classes, self.inner or inner)
+    def copy(self, styles:'dict[str,str]'={}, classes:'list[str]'=[], inner:'list[Symbol]'=None):
+        if inner == None:
+            inner = [Symbol()]
+        styles.update(self.styles)
+        return Symbol(styles, classes, inner = inner)
+    
     
     def set_parent(self, parent:'Symbol'):
         self.parent = parent
@@ -75,6 +83,7 @@ class Symbol:
         
         inner_md = " ".join([e.to_md() for e in self.children])
         return f"{self.md} {inner_md}" + ("\n" if self.nl else "")
+
     
     def get_prop(self, prop, default=""):
         return self.props.get(prop, default)

@@ -1,5 +1,8 @@
 from .symbol import Symbol
 from ..markdown import CustomMarkdown
+from ..rst import CustomRst
+from .h import H1, H2, H3, H4, H5, H6
+from .text import Text
 
 class TableMD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):
@@ -16,7 +19,7 @@ class TrMD(CustomMarkdown):
 class TdMD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):
         return " ".join([e.to_md() for e in inner])
-
+    
 class Table(Symbol):
     html = "table"
     md = TableMD()
