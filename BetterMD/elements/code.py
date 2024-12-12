@@ -31,4 +31,5 @@ class Code(Symbol):
     props = ["language"]
     html = HTML()
     md = MD()
+    rst = "``"
     nl = True 
