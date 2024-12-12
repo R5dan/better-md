@@ -1,6 +1,7 @@
 from .symbol import Symbol
 from ..html import CustomHTML
 from ..markdown import CustomMarkdown
+from ..rst import CustomRst
 
 class HTML(CustomHTML):
     def to_html(self, inner, symbol, parent):
@@ -24,9 +25,15 @@ class MD(CustomMarkdown):
             return f"- [{'x' if symbol.get_prop('checked', '') else ''}] {inner.to_md()}"
         return symbol.to_html()
 
+class RST(CustomRst):
+    def to_rst(self, inner, symbol, parent):
+        if symbol.get_prop("type") == "checkbox":
+            return f"[ ] {inner.to_rst() if inner else ''}"
+        return ""  # Most input types don't have RST equivalents
+
 class Input(Symbol):
     # Common input attributes
-    props = [
+    prop_list = [
         "type",
         "name",
         "value",
@@ -44,4 +51,5 @@ class Input(Symbol):
         "step"
     ]
     html = HTML()
-    md = ""  # No markdown equivalent 
+    md = MD()
+    rst = RST()

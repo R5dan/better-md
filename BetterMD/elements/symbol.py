@@ -70,22 +70,28 @@ class Symbol:
         self.children[i-1] = new
         
 
-    def to_html(self):
+    def to_html(self) -> 'str':
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
 
         inner_HTML = "\n".join([e.to_html() for e in self.children])
         return f"<{self.html} class={' '.join(self.classes) or '""'} style={' '.join([f'{k}:{v}' for k,v in self.styles.items()]) or '""'} {' '.join([f'{k}={v}'for k,v in self.props.items()])}>{inner_HTML}</{self.html}>"
     
-    def to_md(self):
+    def to_md(self) -> 'str':
         if isinstance(self.md, CustomMarkdown):
             return self.md.to_md(self.children, self, self.parent)
         
         inner_md = " ".join([e.to_md() for e in self.children])
         return f"{self.md} {inner_md}" + ("\n" if self.nl else "")
-
     
-    def get_prop(self, prop, default=""):
+    def to_rst(self) -> 'str':
+        if isinstance(self.rst, CustomRst):
+            return self.rst.to_rst(self.children, self, self.parent)
+        
+        inner_rst = " ".join([e.to_rst() for e in self.children])
+        return f"{self.rst}{inner_rst}{self.rst}\n"
+    
+    def get_prop(self, prop, default="") -> 'str':
         return self.props.get(prop, default)
 
     def set_prop(self, prop, value):

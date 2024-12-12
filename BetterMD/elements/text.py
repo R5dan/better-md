@@ -3,7 +3,7 @@ from ..markdown import CustomMarkdown
 from ..html import CustomHTML
 
 
-# This is not equivelant to the base span or p tags but instead just raw text
+# This is not equivelant to the html span or p tags but instead just raw text
 
 class Text(Symbol):
     md = "{t}"

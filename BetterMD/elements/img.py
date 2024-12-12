@@ -1,6 +1,7 @@
 from .symbol import Symbol
 from ..markdown import CustomMarkdown
 from ..html import CustomHTML
+from ..rst import CustomRst
 
 class MD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):
@@ -11,7 +12,12 @@ class HTML(CustomHTML):
     def to_html(self, inner, symbol, parent):
         return f"<img src={symbol.get_prop('src')} alt={symbol.get_prop('alt', '')} />"
 
+class RST(CustomRst):
+    def to_rst(self, inner, symbol, parent):
+        return f".. image:: {symbol.get_prop('src')}\n   :alt: {symbol.get_prop("alt", "")}\n"
+
 class Img(Symbol):
     props = ["src", "alt"]
     md = MD()
-    html = HTML() 
+    html = HTML()
+    rst = RST() 

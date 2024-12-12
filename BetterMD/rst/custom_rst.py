@@ -3,12 +3,14 @@ import typing as t
 if t.TYPE_CHECKING:
     from ..elements.symbol import Symbol
 
-class CustomRst:
+T = t.TypeVar("T", default='Symbol')
+
+class CustomRst(t.Generic[T]):
     prop = ""
     rst: 'dict[str, str]' = {}
 
-    def to_rst(self, inner: 'list[Symbol]', symbol:'Symbol', parent:'Symbol') -> str: ...
+    def to_rst(self, inner: 'list[Symbol]', symbol:'T', parent:'Symbol') -> str: ...
 
-    def prepare(self, inner:'list[Symbol]', symbol:'Symbol', parent:'Symbol'): ...
+    def prepare(self, inner:'list[Symbol]', symbol:'T', parent:'Symbol'): ...
 
     def verify(self, text) -> bool: ...

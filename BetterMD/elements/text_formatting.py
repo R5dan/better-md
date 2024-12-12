@@ -8,15 +8,16 @@ class SMD(CustomMarkdown):
         return f"**{content}**"
 
 class EMD(CustomMarkdown):
-    def to_md(self, inner: list[Symbol], symbol: Symbol, parent: Symbol) -> str:
+    def to_md(self, inner, symbol, parent):
         content = " ".join([e.to_md() for e in inner])
         return f"*{content}*"
-
 
 class Strong(Symbol):
     html = "strong"
     md = SMD()
+    rst = "**"
 
 class Em(Symbol):
     html = "em"
     md = EMD()
+    rst = "*"
