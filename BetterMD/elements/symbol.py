@@ -74,7 +74,7 @@ class Symbol:
             
         return False
 
-    def prepare(self, parent:'Symbol'):
+    def prepare(self, parent:'t.Union[Symbol, None]'=None):
         self.prepared = True
         self.parent = parent
         for symbol in self.children:

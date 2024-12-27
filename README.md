@@ -9,8 +9,9 @@ pip install better-md
 ## Usage
 
 ```python
-from better_md import md
+import BetterMD as md
 
 html = md.H1("Hello, world!").prepare().to_html()
 md = md.H1("Hello, world!").prepare().to_md()
+rst = md.H1("Hello, world!").prepare().to_rst()
 ```
