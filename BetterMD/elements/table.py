@@ -30,7 +30,14 @@ class THeadMD(CustomMarkdown['THead']):
 
             md.append({"len":len(e), "style":child.styles.get("text-align", "justify")})
 
-        return f"{inner[0].to_md()}\n|{"|".join([f"{" :" if item["style"] in ["left", "center"] else " "}{"-"*(item["len"]-2) if item["style"] == "center" else "-"*(item["len"]-1) if item["style"] in ["left", "right"] else "-"*(item["len"])}{": " if item["style"] in ["right", "center"] else " "}" for item in md])}|"
+        def parse_md(data: 'dict') -> 'str':
+            start = " :" if data["style"] in ["left", "center"] else " "
+            middle = "-"*(data["len"]-2) if data["style"] == "center" else "-"*(data["len"]-1) if data["style"] in ["left", "right"] else "-"*(data["len"])
+            end = ": " if data["style"] in ["right", "center"] else " "
+
+            return f"{start}{middle}{end}"
+
+        return f"{inner[0].to_md()}\n|{"|".join([parse_md(item) for item in md])}|"
         
 class TBodyMD(CustomMarkdown['TBody']):
     def to_md(self, inner, symbol, parent):
