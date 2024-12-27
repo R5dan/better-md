@@ -20,6 +20,9 @@ class Text(Symbol):
     def to_md(self):
         return self.text
     
+    def to_rst(self) -> str:
+        return self.text
+    
     def __str__(self):
         return f"<Text object>{self.text}</Text>"
 
