@@ -6,6 +6,7 @@ from ..html import CustomHTML
 from ..rst import CustomRst
 
 T = t.TypeVar("T", default=t.Any)
+T2 = t.TypeVar("T2", default=t.Any)
 logger = logging.getLogger("BetterMD")
 
 class List(list, t.Generic[T]):
@@ -17,10 +18,22 @@ class List(list, t.Generic[T]):
     def append(self, object: 'T') -> 'None':
         self.on_ammend(object)
         return super().append(object)
+    
+    def get(self, index, default:'T2'=None) -> 't.Union[T, T2]':
+        try:
+            return self[index]
+        except IndexError:
+            return default
 
     def __setitem__(self, key, value):
         self.on_set(key, value)
         return super().__setitem__(key, value)
+    
+    def __getitem__(self, item) -> 'T':
+        return super().__getitem__(item)
+    
+    def __iter__(self) -> 't.Iterator[T]':
+        return super().__iter__()
 
 class Symbol:
     styles: 'dict[str, str]' = {}
@@ -74,11 +87,11 @@ class Symbol:
             
         return False
 
-    def prepare(self, parent:'t.Union[Symbol, None]'=None):
+    def prepare(self, parent:'t.Union[Symbol, None]'=None, *args, **kwargs):
         self.prepared = True
         self.parent = parent
-        for symbol in self.children:
-            symbol.prepare(self)
+        
+        [symbol.prepare(self, *args, **kwargs) for symbol in self.children]
         
         return self
 
@@ -90,6 +103,9 @@ class Symbol:
         
 
     def to_html(self) -> 'str':
+        if not self.prepared:
+            self.prepare()
+        
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
         
@@ -106,17 +122,23 @@ class Symbol:
         logger.debug(f"{inner_HTML=} {self.html=} {self.classes=} {self.styles=} {props=}")
         return f"<{self.html} class={'"'}{' '.join(self.classes) or ''}{'"'} style={'"'}{' '.join([f'{k}:{v}' for k,v in self.styles.items()]) or ''}{'"'} {' '.join(props)}>{inner_HTML}</{self.html}>"
     
-    def to_md(self) -> 'str':
+    def to_md(self, **kwargs) -> 'str':
+        if not self.prepared:
+            self.prepare(**kwargs)
+        
         if isinstance(self.md, CustomMarkdown):
-            return self.md.to_md(self.children, self, self.parent)
+            return self.md.to_md(self.children, self, self.parent, **kwargs)
         
         if self.md == None:
-            return self.to_html()
+            return self.to_html(**kwargs)
         
         inner_md = " ".join([e.to_md() for e in self.children])
         return f"{self.md} {inner_md}" + ("\n" if self.nl else "")
     
-    def to_rst(self) -> 'str':
+    def to_rst(self, **kwargs) -> 'str':
+        if not self.prepared:
+            self.prepare(**kwargs)
+
         if isinstance(self.rst, CustomRst):
             return self.rst.to_rst(self.children, self, self.parent)
         
