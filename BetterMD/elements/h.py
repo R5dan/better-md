@@ -6,8 +6,8 @@ class RST(CustomRst):
         self.character = character
         super().__init__()
 
-    def to_rst(self, inner: list[Symbol], symbol: Symbol, parent: Symbol) -> str:
-        list_rst = [e.to_rst() for e in inner]
+    def to_rst(self, inner: list[Symbol], symbol: Symbol, parent: Symbol, **kwargs) -> str:
+        list_rst = [e.to_rst(**kwargs) for e in inner]
         content = "\n".join(list_rst)
         max_length = len(max(list_rst, key=lambda l: len(l)))
 

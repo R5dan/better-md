@@ -3,32 +3,32 @@ from .text import Text
 from ..markdown import CustomMarkdown
 from ..html import CustomHTML
 
-class MD(CustomMarkdown):
-    def to_md(self, inner, symbol, parent):
+class MD(CustomMarkdown['Code']):
+    def to_md(self, inner, symbol, parent, **kwargs):
         language = symbol.get_prop("language", "")
-        if isinstance(inner, Text):
-            inner = inner.to_md()
+        
+        content = " ".join([e.to_md(**kwargs) for e in inner])
         
         # If it's a code block (has language or multiline)
         if language or "\n" in inner:
-            return f"```{language}\n{inner}\n```\n"
+            return f"```{language}\n{content}\n```\n"
         
         # Inline code
-        return f"`{inner}`"
+        return f"`{content}`"
 
 class HTML(CustomHTML):
-    def to_html(self, inner, symbol, parent):
+    def to_html(self, inner, symbol, parent, **kwargs):
         language = symbol.get_prop("language", "")
-        if isinstance(inner, Text):
-            inner = inner.to_html()
+        
+        content = " ".join([e.to_html(**kwargs) for e in inner])
         
         if language:
-            return f'<pre><code class="language-{language}">{inner}</code></pre>'
+            return f'<pre><code class="language-{language}">{content}</code></pre>'
         
-        return f"<code>{inner}</code>"
+        return f"<code>{content}</code>"
 
 class Code(Symbol):
-    props = ["language"]
+    prop_list = ["language"]
     html = HTML()
     md = MD()
     rst = "``"

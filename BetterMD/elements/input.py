@@ -4,7 +4,7 @@ from ..markdown import CustomMarkdown
 from ..rst import CustomRst
 
 class HTML(CustomHTML):
-    def to_html(self, inner, symbol, parent):
+    def to_html(self, inner, symbol, parent, **kwargs):
         # Collect all input attributes
         attrs = []
         for prop in Input.props:
@@ -20,13 +20,13 @@ class HTML(CustomHTML):
         return f"<input {attrs_str} />"
 
 class MD(CustomMarkdown):
-    def to_md(self, inner, symbol, parent):
+    def to_md(self, inner, symbol, parent, **kwargs):
         if symbol.get_prop("type") == "checkbox":
             return f"- [{'x' if symbol.get_prop('checked', '') else ''}] {inner.to_md()}"
         return symbol.to_html()
 
 class RST(CustomRst):
-    def to_rst(self, inner, symbol, parent):
+    def to_rst(self, inner, symbol, parent, **kwargs):
         if symbol.get_prop("type") == "checkbox":
             return f"[ ] {inner.to_rst() if inner else ''}"
         return ""  # Most input types don't have RST equivalents
