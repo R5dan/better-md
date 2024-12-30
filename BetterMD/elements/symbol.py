@@ -143,7 +143,7 @@ class Symbol:
             return self.rst.to_rst(self.children, self, self.parent)
         
         if self.rst == None:
-            return self.to_html()
+            return f".. raw:: html\n\n{"    ".join(self.to_html().splitlines())}\n"
         
         inner_rst = " ".join([e.to_rst() for e in self.children])
         return f"{self.rst}{inner_rst}{self.rst}\n"
