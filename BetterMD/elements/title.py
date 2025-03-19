@@ -8,7 +8,7 @@ class MD(CustomMarkdown):
         if not inner or not isinstance(inner[0], Text) or len(inner) != 1:
              raise ValueError("Title element must contain a single Text element")
 
-        return f'title: "{inner[0].to_md()}"'
+        return f'title: "{inner[0].to_md()}"\n# "{inner[0].to_md()}"'
 
 class RST(CustomRst):
     def to_rst(self, inner: list[Symbol], symbol: Symbol, parent: Symbol, **kwargs) -> str:

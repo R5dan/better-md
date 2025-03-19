@@ -7,7 +7,6 @@ class MDParser:
 
     top_level_tags = {
         "blockquote": r"^> (.+)$", # Blockquote
-        "br": r"\n\n", # Br
         "code": r"^```([A-Za-z]*)[^.](?:([^`]*)[^.])?```$", # Code block
 
         "h": r"^(#{1,6})(?: (.*))?$",
@@ -109,7 +108,7 @@ class MDParser:
         elm = self.create_element("pre", children=[self.create_element("code", {"language": lang}, [self.create_text(content)])])
         self.dom.append(elm)
 
-        return "\n".join(text)["\n".join(text).index("```"):].splitlines().index("```")
+        return len(content.splitlines()) + 2
 
 
     def handle_br(self, line: 'str'):
