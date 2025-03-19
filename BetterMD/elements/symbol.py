@@ -3,7 +3,7 @@ import typing as t
 from ..markdown import CustomMarkdown
 from ..html import CustomHTML
 from ..rst import CustomRst
-from ..parse import HTMLParser, MDParser, RSTParser, ELEMENT, TEXT, Collection
+from ..parse import HTMLParser, MDParser, ELEMENT, TEXT, Collection
 
 class Symbol:
     styles: 'dict[str, str]' = {}
@@ -29,19 +29,29 @@ class Symbol:
         cls.collection.add_symbols(cls)
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, styles:'dict[str,str]'={}, classes:'list[str]'=[], inner:'list[Symbol]'=[], **props):
+    def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props):
+        if styles == None:
+            styles = {}
+        if classes == None:
+            classes = []
+        if inner == None:
+            inner = []
+
         self.styles = styles
         self.classes = classes
         self.children = list(inner) or []
         self.props = props
 
-
-    def copy(self, styles:'dict[str,str]'={}, classes:'list[str]'=[], inner:'list[Symbol]'=None):
+    def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
         if inner == None:
             inner = []
+        if styles == None:
+            styles = {}
+        if classes == None:
+            classes = []
+
         styles.update(self.styles)
         return Symbol(styles, classes, inner = inner)
-
 
     def set_parent(self, parent:'Symbol'):
         self.parent = parent

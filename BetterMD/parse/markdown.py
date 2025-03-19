@@ -13,6 +13,7 @@ class MDParser:
         "h": r"^(#{1,6})(?: (.*))?$",
 
         "hr": r"^---+$", # Hr
+        "br": r"\s", # Br
 
         "ul" : r"^([ |	]*)(?:-|\+|\*)(?: (.*))?$", # Ul Li
         "ol" : r"^([ |	]*)(\d)\.(?: (.*))?$", # Ol Li
@@ -20,7 +21,7 @@ class MDParser:
         "tr": r"^\|(?:[^|\n]+\|)+$",  # tr - must start and end with | and have at least one |
         "thead": r"^\|(?::?-+:?\|)+$", # thead / tbody
 
-        "title": r"^title: .+$", # Title
+        "title": r"^title:(?: (.+))?$", # Title
     }
 
     def __init__(self):
@@ -108,12 +109,12 @@ class MDParser:
         elm = self.create_element("pre", children=[self.create_element("code", {"language": lang}, [self.create_text(content)])])
         self.dom.append(elm)
 
-        return "\n".join(text)["\n".join(text).index("```"):].index("```")
+        return "\n".join(text)["\n".join(text).index("```"):].splitlines().index("```")
 
 
-    def handle_br(self, text: 'list[str]'):
+    def handle_br(self, line: 'str'):
         self.end_block()
-        if text[0] == "" and text[1] == "":
+        if line == "":
             self.dom.append(self.create_element("br", {}))
             return 1
         return 0
@@ -328,7 +329,7 @@ class MDParser:
                 lines_processed = self.handle_table(lines, i)
                 i += lines_processed
                 continue
-            
+
             elif re.search(self.top_level_tags["title"], line):
                 self.end_block()
                 self.handle_title(line)
@@ -337,10 +338,10 @@ class MDParser:
 
             elif re.search(self.top_level_tags["br"], line):
                 self.end_block()
-                lines_processed = self.handle_br(lines[i:])
+                lines_processed = self.handle_br(line)
                 i += lines_processed
                 continue
-            
+
             else:
                 # Regular text gets buffered for paragraph handling
                 self.handle_text(line)
@@ -349,7 +350,7 @@ class MDParser:
         # End any remaining block
         self.end_block()
 
-        head = self.create_element("head") or self.head
+        head = self.head or self.create_element("head")
         body = self.create_element("body", children=self.dom)
 
         return self.create_element("html", children=[head, body])

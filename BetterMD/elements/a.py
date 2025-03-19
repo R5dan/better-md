@@ -2,10 +2,6 @@ from .symbol import Symbol
 from ..rst import CustomRst
 from ..markdown import CustomMarkdown
 import re
-import typing as t
-
-if t.TYPE_CHECKING:
-    from ..parse import Collection
 
 class MD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):
@@ -26,7 +22,7 @@ class MD(CustomMarkdown):
 
         return False
 
-    
+
 class RST(CustomRst['A']):
     def to_rst(self, inner, symbol, parent):
         return f"`{' '.join([e.to_rst() for e in inner])} <{symbol.get_prop('href')}>`_"

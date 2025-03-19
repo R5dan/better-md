@@ -3,7 +3,6 @@ from ..markdown import CustomMarkdown
 from ..rst import CustomRst
 from .h import H1, H2, H3, H4, H5, H6
 from .text import Text
-import itertools as it
 
 class TableMD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):

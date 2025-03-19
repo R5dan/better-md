@@ -1,4 +1,5 @@
 from .elements import *
+from .elements import Symbol
 from .parse import Collection, HTMLParser, MDParser, RSTParser
 
 def from_html(html:'str'):
