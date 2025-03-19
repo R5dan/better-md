@@ -1,10 +1,7 @@
 import re
-import typing as t
 from .typing import ELEMENT, TEXT
-import threading as th
 
 class MDParser:
-
     top_level_tags = {
         "blockquote": r"^> (.+)$", # Blockquote
         "code": r"^```([A-Za-z]*)[^.](?:([^`]*)[^.])?```$", # Code block
@@ -94,7 +91,7 @@ class MDParser:
         # Parse blockquote content recursively
         elm["children"] = MDParser().parse("\n".join(new_text))
         self.dom.append(elm)
-        
+
         return len(new_text) - 1
 
     def handle_code(self, text: 'list[str]'):
@@ -109,7 +106,6 @@ class MDParser:
         self.dom.append(elm)
 
         return len(content.splitlines()) + 2
-
 
     def handle_br(self, line: 'str'):
         self.end_block()
@@ -156,10 +152,10 @@ class MDParser:
 
         current_item = []
         lines_processed = 0
-        
+
         while i + lines_processed < len(text):
             line = text[i + lines_processed]
-            
+
             if not line.strip():
                 if current_item:
                     # Empty line in list item - treat as paragraph break
@@ -170,7 +166,7 @@ class MDParser:
             list_match = re.match(list_pattern, line)
             if list_match:
                 indent = len(list_match.group(1))
-                
+
                 if indent < indent_level:
                     # End of current list level
                     break
@@ -179,7 +175,7 @@ class MDParser:
                     nested_lines = lines_processed + self.handle_list(text[i + lines_processed:], 0, indent)
                     lines_processed += nested_lines
                     continue
-                
+
                 # Add previous item if exists
                 if current_item:
                     content = " ".join(current_item).strip()
@@ -187,16 +183,16 @@ class MDParser:
                         list_elm["children"].append(
                             self.create_element("li", children=[self.create_text(content)])
                         )
-                
+
                 # Start new item
                 current_item = [list_match.group(2).strip()]
-                
+
             elif not any(re.match(pattern, line) for pattern in self.top_level_tags.values()):
                 # Continuation of list item
                 current_item.append(line.strip())
             else:
                 break
-                
+
             lines_processed += 1
 
         # Add final item
@@ -217,40 +213,40 @@ class MDParser:
             # Not a table, treat as regular text
             self.handle_text(text[i])
             return 1
-        
+
         lines_processed = 0
         table = self.create_element("table")
         thead = self.create_element("thead")
         tbody = self.create_element("tbody")
         current_section = thead
-        
+
         while i + lines_processed < len(text):
             line = text[i + lines_processed]
-            
+
             if not line.strip():
                 break
-                
+
             if re.match(self.top_level_tags["thead"], line):
                 # Alignment row - skip it but switch to tbody
                 current_section = tbody
                 lines_processed += 1
                 continue
-                
+
             if re.match(self.top_level_tags["tr"], line):
                 # Process table row
                 row = self.create_element("tr")
                 cells = [cell.strip() for cell in line.strip('|').split('|')]
-                
+
                 for cell in cells:
                     if current_section == thead:
                         cell_type = "th"
                     else:
                         cell_type = "td"
-                        
+
                     row["children"].append(
                         self.create_element(cell_type, children=[self.create_text(cell.strip())])
                     )
-                    
+
                 current_section["children"].append(row)
                 lines_processed += 1
             else:
@@ -260,10 +256,10 @@ class MDParser:
             table["children"].append(thead)
         if tbody["children"]:
             table["children"].append(tbody)
-            
+
         self.dom.append(table)
         return lines_processed
-    
+
     def handle_title(self, line: 'str'):
         self.end_block()
         match = re.match(self.top_level_tags["title"], line)
@@ -292,37 +288,31 @@ class MDParser:
                 self.handle_h(line)
                 i += 1
                 continue
-            
+
             elif re.search(self.top_level_tags["blockquote"], line):
                 self.end_block()
                 lines_processed = self.handle_blockquote(lines, i)
                 i += lines_processed + 1
                 continue
-            
+
             elif re.search(self.top_level_tags["code"], "\n".join(lines[i:])):
                 self.end_block()
                 lines_processed = self.handle_code(lines[i:])
                 i += lines_processed + 1
                 continue
-            
-            elif re.search(self.top_level_tags["h"], line):
-                self.end_block()
-                self.handle_h(line)
-                i += 1
-                continue
-            
+
             elif re.search(self.top_level_tags["hr"], line):
                 self.end_block()
                 self.handle_hr(line)
                 i += 1
                 continue
-            
+
             elif re.search(self.top_level_tags["ul"], line) or re.search(self.top_level_tags["ol"], line):
                 self.end_block()
                 lines_processed = self.handle_list(lines, i)
                 i += lines_processed
                 continue
-            
+
             elif re.search(self.top_level_tags["tr"], line):
                 self.end_block()
                 lines_processed = self.handle_table(lines, i)
