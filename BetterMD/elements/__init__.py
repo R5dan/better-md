@@ -1,17 +1,21 @@
+from .symbol import Symbol
+
 from .a import A
+from .blockquote import Blockquote
+from .body import Body
+from .br import Br
+from .code import Code
+from .div import Div
 from .h import H1,H2,H3,H4,H5,H6
 from .head import Head
+from .hr import Hr
+from .html import HTML
+from .img import Img
+from .input import Input
 from .li import OL, UL, LI
-from .text import Text
-from .div import Div
 from .p import P
 from .span import Span
-from .img import Img
-from .text_formatting import Strong as B, Em as I
-from .br import Br
-from .blockquote import Blockquote
-from .hr import Hr
-from .table import Table, Tr, Td, Th
-from .input import Input
-from .code import Code
-from .symbol import Symbol
+from .table import Table, Tr, Td, Th, THead, TBody
+from .text_formatting import Strong, Em, Strong as B, Em as I
+from .text import Text
+from .title import Title

@@ -5,3 +5,8 @@ class P(Symbol):
     md = ""
     rst = "\n\n"
     nl = True
+
+class Pre(Symbol):
+    html = "pre"
+    md = ""
+    rst = ""

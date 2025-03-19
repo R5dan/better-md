@@ -1,4 +1,4 @@
-from BetterMD import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input, CustomRst, CustomHTML, CustomMarkdown
+from BetterMD import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input, THead
 
 print(H1(inner=[Text("Hi")]).to_html())
 print(H1(inner=[Text("Hi")]).to_md())
@@ -40,13 +40,15 @@ print(Strong(inner=[Text("Bold text")]).prepare(None).to_md())  # **Bold text**
 print("RST",
     Table(
         inner=[
+          THead(
+            inner=[
             Tr(
                 inner=[
                     Th(inner=[Text("Header 1")]),
                     Th(inner=[Text("Header 2")])
                 ],
-                is_header=True
-            ),
+            )
+            ]),
             Tr(
                 inner=[
                     Td(inner=[Text("Cell 1")]),
