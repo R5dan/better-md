@@ -142,7 +142,6 @@ class Symbol:
     @classmethod
     def from_html(cls, text:'str') -> 'List[Symbol]':
         parsed = cls.html_parser.parse(text)
-        print(parsed)
         return List([cls.collection.find_symbol(elm['name'] , raise_errors=True).parse(elm) for elm in parsed])
 
     @classmethod

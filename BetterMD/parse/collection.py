@@ -17,14 +17,9 @@ class Collection:
         self.symbols.remove(symbol)
 
     def find_symbol(self, name:'str', raise_errors:'bool'=False) -> 't.Union[type[Symbol], t.Union[None, t.NoReturn]]':
-        print(name)
-        print("VALID HTML") if filter(lambda s: isinstance(s.html, str) and s.html.lower() == name.lower(), self.symbols) else print("INVALID HTML")
         for symbol in self.symbols:
-            if name == "abbr":
-                print(symbol.html)
-            if isinstance(symbol.html, str) and symbol.html.lower() == name.lower():
-                return symbol
-            elif isinstance(symbol.html, CustomHTML) and symbol.html.verify(name):
+            if (isinstance(symbol.html, CustomHTML) and symbol.html.verify(name)) or 
+                (isinstance(symbol.html, str) and symbol.html.lower() == name.lower()):
                 return symbol
 
         if raise_errors:

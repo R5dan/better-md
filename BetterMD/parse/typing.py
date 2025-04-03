@@ -3,9 +3,9 @@ import typing as t
 from ..typing import ATTR_TYPES, ATTRS
 
 class TEXT(t.TypedDict):
-    type: t.Literal["text"]
-    content: str
-    name: t.Literal["text"]
+    type: 't.Literal["text"]'
+    content: 'str'
+    name: 't.Literal["text"]'
 
 class ELEMENT(t.TypedDict):
     type: 't.Literal["element"]'

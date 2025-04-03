@@ -12,8 +12,8 @@ class MD(CustomMarkdown):
         
         # If it's a code block (has language or multiline)
         if language or "\n" in inner:
-            return f"```{language}\n{inner}\n```\n"
-        
+            return f"```\n{language}\n{inner}\n```\n"
+
         # Inline code
         return f"`{inner}`"
 
@@ -66,4 +66,3 @@ class Code(Symbol):
     html = HTML()
     md = MD()
     rst = RST()
-    nl = True 

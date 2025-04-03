@@ -4,7 +4,7 @@ class DD(Symbol):
     md = ""
     html = "dd"
     rst = ""
-  
+
 class DT(Symbol):
     md = ""
     html = "dt"

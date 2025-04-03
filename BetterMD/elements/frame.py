@@ -7,4 +7,4 @@ class Frame(Symbol):
     
     md = ""
     html = "frame"
-    rst = "" 
+    rst = ""

@@ -1,5 +1,7 @@
 from .symbol import Symbol
 
+from .text_formatting import Strong, Em, B
+
 from .a import A
 from .abbr import Abbr
 from .acronym import Acronym
@@ -106,7 +108,6 @@ from .sup import Sup
 
 from .table import Table, Tr, Td, Th, THead, TBody, TFoot
 from .template import Template
-from .text_formatting import Strong, Em, Strong as B, Em as I
 from .text import Text
 from .textarea import Textarea
 from .time import Time

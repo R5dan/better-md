@@ -4,5 +4,5 @@ class Param(Symbol):
     prop_list = ["name", "value", "type", "valuetype"]
 
     md = ""
-    html = "object"
+    html = "param"
     rst = ""

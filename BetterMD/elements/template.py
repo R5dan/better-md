@@ -1,7 +1,7 @@
 from .symbol import Symbol
 
 class Template(Symbol):
-    prop_list = ["shadowrootmode", "shadowrootclonable", "shadowrootclonable", "shadowrootserializable", "shadowrootdelegayesfocus", "shadowrootserializable"]
+    prop_list = ["shadowrootmode", "shadowrootclonable", "shadowrootdelegatesfocus", "shadowrootserializable"]
 
     html = "template"
     md = "" 

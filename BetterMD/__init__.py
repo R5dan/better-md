@@ -15,10 +15,11 @@ class HTML:
     def from_url(url):
         import requests as r
         t = r.get(url).text[15:]
-        print(t[:1000])
         return Symbol.from_html(t)
 
 class MD:
     @staticmethod
     def from_string(md:'str'):
         return Symbol.from_md(md)
+
+__all__ = ["HTML", "MD", "Symbol", "Collection", "HTMLParser", "MDParser"]

@@ -4,5 +4,5 @@ class Q(Symbol):
     prop_list = ["cite"]
 
     md = ""
-    html = "object"
+    html = "q"
     rst = ""
