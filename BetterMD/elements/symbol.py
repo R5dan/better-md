@@ -4,12 +4,14 @@ from ..markdown import CustomMarkdown
 from ..html import CustomHTML
 from ..rst import CustomRst
 from ..parse import HTMLParser, MDParser, ELEMENT, TEXT, Collection
+from ..utils import List
+from ..typing import ATTRS, ATTR_TYPES
 
 class Symbol:
     styles: 'dict[str, str]' = {}
     classes: 'list[str]' = []
     html: 't.Union[str, CustomHTML]' = ""
-    props: 'dict[str, str]' = {}
+    props: 'dict[str, t.Union[str, bool, int, float, list, dict]]' = {}
     prop_list: 'list[str]' = []
     vars:'dict[str,str]' = {}
     children:'list[Symbol]' = []
@@ -18,6 +20,7 @@ class Symbol:
     parent:'Symbol' = None
     prepared:'bool' = False
     nl:'bool' = False
+    block: 'bool' = False
 
     html_written_props = ""
 
@@ -29,7 +32,7 @@ class Symbol:
         cls.collection.add_symbols(cls)
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props):
+    def __init__(self, styles:'dict[str,ATTR_TYPES]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props):
         if styles == None:
             styles = {}
         if classes == None:
@@ -93,15 +96,41 @@ class Symbol:
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
 
+        def handle_props(props):
+            props = []
+            for k, v in self.props.items():
+                if isinstance(v, bool) or v == "":
+                    props.append(f"{k}" if v else "")
+                elif isinstance(v, (int, float, str)):
+                    props.append(f"{k}={'"'}{v}{'"'}")
+                elif isinstance(v, list):
+                    props.append(f"{k}={'"'}{' '.join(v)}{'"'}")
+                elif isinstance(v, dict):
+                    props.append(f"{k}={'{'}{' '.join([f'{k}:{v}' for k,v in v.items()])}{'}'}")
+                else:
+                    raise TypeError(f"Unsupported type for prop {k}: {type(v)}")
+
+            return ' '.join(props)
+
+
         inner_HTML = f"\n{"    "*indent}".join([e.to_html(indent+1) if not (len(self.children) == 1 and self.children[0].html == "text") else e.to_html(0) for e in self.children])
-        return f"<{self.html}{" " if self.styles or self.classes or self.props else ""}{f"class={'"'}{' '.join(self.classes) or ''}{'"'}" if self.classes else ""}{" " if (self.styles or self.classes) and self.props else ""}{f"style={'"'}{' '.join([f'{k}:{v}' for k,v in self.styles.items()]) or ""}{'"'}" if self.styles else ""}{" " if (self.styles or self.classes) and self.props else ""}{' '.join([f'{k}={'"'}{v}{'"'}' if v != "" else f'{k}' for k,v in self.props.items()])}{f">{"\n" if len(self.children) > 1 else ""}{inner_HTML}{"\n" if len(self.children) > 1 else ""}</{self.html}>" if inner_HTML else f" />"}"
+        return f"<{self.html}{" " if self.styles or self.classes or self.props else ""}{f"class={'"'}{' '.join(self.classes) or ''}{'"'}" if self.classes else ""}{" " if (self.styles or self.classes) and self.props else ""}{f"style={'"'}{' '.join([f'{k}:{v}' for k,v in self.styles.items()]) or ""}{'"'}" if self.styles else ""}{" " if (self.styles or self.classes) and self.props else ""}{handle_props(self.props)}{f">{"\n" if len(self.children) > 1 else ""}{inner_HTML}{"\n" if len(self.children) > 1 else ""}</{self.html}>" if inner_HTML else f" />"}"
 
     def to_md(self) -> 'str':
         if isinstance(self.md, CustomMarkdown):
             return self.md.to_md(self.children, self, self.parent)
 
-        inner_md = "".join([e.to_md() for e in self.children])
-        return f"{self.md}{inner_md}" + ("\n" if self.nl else "")
+        inner_md = ""
+        
+        for e in self.children:
+            if e.block:
+                inner_md += f"\n{e.to_md()}\n"
+            elif e.nl:
+                inner_md += f"{e.to_md()}\n"
+            else:
+                inner_md += f"{e.to_md()}"
+
+        return f"{self.md}{inner_md}"
 
     def to_rst(self) -> 'str':
         if isinstance(self.rst, CustomRst):
@@ -111,35 +140,36 @@ class Symbol:
         return f"{self.rst}{inner_rst}{self.rst}\n"
 
     @classmethod
-    def from_html(cls, text:'str') -> 'list[Symbol]':
+    def from_html(cls, text:'str') -> 'List[Symbol]':
         parsed = cls.html_parser.parse(text)
-        return [cls.collection.find_symbol(elm['name'] , raise_errors=True).parse(elm) for elm in parsed]
+        print(parsed)
+        return List([cls.collection.find_symbol(elm['name'] , raise_errors=True).parse(elm) for elm in parsed])
 
     @classmethod
-    def parse(cls, text:'ELEMENT') -> 'Symbol':
+    def from_md(cls, text: str) -> 'List[Symbol]':
+        parsed = cls.md_parser.parse(text)
+        return List([cls.collection.find_symbol(elm['name'] , raise_errors=True).parse(elm) for elm in parsed])
+
+    @classmethod
+    def parse(cls, text:'ELEMENT|TEXT') -> 'Symbol':
         def handle_element(element:'ELEMENT|TEXT') -> 'Symbol':
             if element['type'] == 'text':
                 text = cls.collection.find_symbol("text", raise_errors=True)
                 assert text is not None, "`collection.find_symbol` is broken"
-
                 return text(element['content'])
 
             symbol_cls = cls.collection.find_symbol(element['name'], raise_errors=True)
             assert symbol_cls is not None, "`collection.find_symbol` is broken"
 
             return symbol_cls.parse(element)
+        
+        if text["type"] == "text":
+            return cls.collection.find_symbol("text", raise_errors=True)(text["content"])
 
-        styles = {s.split(":")[0]: s.split(":")[1] for s in text["attributes"].pop("style", "").split(";") if ":" in s}
-        classes = list(filter(lambda c: bool(c), text["attributes"].pop("class", "").split(" ")))
+        styles = text["attributes"].get("style", {})
+        classes = list(filter(lambda c: bool(c), text["attributes"].pop("class", "")))
 
         return cls(styles, classes, inner=[handle_element(elm) for elm in text["children"]], **text["attributes"])
-
-    @classmethod
-    def from_md(cls, text: str) -> 'Symbol':
-        parsed = cls.md_parser.parse(text)
-        return cls.collection.find_symbol(parsed['name'], raise_errors=True).parse(parsed)
-
-
 
     def get_prop(self, prop, default="") -> 'str':
         return self.props.get(prop, default)

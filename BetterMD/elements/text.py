@@ -14,7 +14,7 @@ class Text(Symbol):
         self.text = text
         return super().__init__(**props)
 
-    def to_html(self, indent=0, parent=None):
+    def to_html(self, indent=0):
         return f"{'    '*indent}{self.text}"
 
     def to_md(self):
@@ -22,3 +22,8 @@ class Text(Symbol):
     
     def to_rst(self):
         return self.text
+    
+    def __str__(self):
+        return self.text
+
+    __repr__ = __str__

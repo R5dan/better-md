@@ -18,6 +18,8 @@ class RST(CustomRst):
         return f":title: {inner[0].to_rst()}"
 
 class Title(Symbol):
+    prop_list = ["align", "bgcolor", "char", "charoff", "valign"]
+
     html = "title"
     md = MD()
     rst = RST()

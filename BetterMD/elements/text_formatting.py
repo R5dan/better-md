@@ -17,6 +17,11 @@ class Strong(Symbol):
     md = SMD()
     rst = "**"
 
+class B(Symbol):
+    html = "b"
+    md = SMD()
+    rst = "**"
+
 class Em(Symbol):
     html = "em"
     md = EMD()

@@ -31,16 +31,21 @@ class LRST(CustomRst):
 
 
 class LI(Symbol):
+    prop_list = ["value", "type"]
+
     html = "li"
     md = MD()
     rst = RST()
 
 class OL(Symbol):
+    prop_list = ["reversed", "start", "type"]
     html = "ol"
     md = LMD()
     rst = LRST()
 
 class UL(Symbol):
+    prop_list = ["compact", "type"]
+
     html = "ul"
     md = LMD()
     rst = LRST()

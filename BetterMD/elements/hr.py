@@ -11,7 +11,9 @@ class RST(CustomRst):
         return "----\n"
 
 class Hr(Symbol):
+    prop_list = ["align", "color", "noshade", "size", "width"]
+
     html = "hr"
     md = MD()
     rst = RST()
-    nl = True 
+    block = True 

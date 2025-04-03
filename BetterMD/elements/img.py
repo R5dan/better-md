@@ -17,7 +17,7 @@ class RST(CustomRst):
         return f".. image:: {symbol.get_prop('src')}\n   :alt: {symbol.get_prop("alt", "")}\n"
 
 class Img(Symbol):
-    props = ["src", "alt"]
+    prop_list = ["alt", "attributionsrc", "crossorigin", "decoding", "elementtiming", "fetchpriority", "height", "ismap", "loading", "referrerpolicy", "sizes", "src", "srcset",  "width", "usemap", "align", "border", "hspace", "longdesc", "name", "vspace"]
     md = MD()
     html = HTML()
     rst = RST() 

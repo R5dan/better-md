@@ -126,6 +126,8 @@ class TrMD(CustomMarkdown):
         cells = [cell.to_md() for cell in inner]
         return f"|{'|'.join(cells)}|"
 
+
+
 class TrRST(CustomRst):
     def to_rst(self, inner, symbol, parent):
         # This is now handled by TableRST
@@ -154,10 +156,13 @@ class TBodyRST(CustomRst):
         return ""
 
 class Table(Symbol):
+    # All deprecated
+    prop_list = ["align", "bgcolor", "border", "cellpadding", "cellspacing", "frame", "rules", "summary", "width"]
+
     html = "table"
     md = TableMD()
     rst = TableRST()
-    nl = True
+    block = True
 
 class Tr(Symbol):
     html = "tr"
@@ -165,21 +170,44 @@ class Tr(Symbol):
     rst = TrRST()
 
 class Td(Symbol):
+    prop_list = ["colspan", "rowspan", "headers"]
+    # Deprecated
+    prop_list +=  ["abbr", "align", "axis", "bgcolor", "char", "charoff", "height", "scope", "valign", "width"]
+
     html = "td"
     md = TdMD()
     rst = TdRST()
 
 class Th(Symbol):
+    prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
+    # Deprecated
+    prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
+
+
     html = "th"
     md = TdMD()
     rst = ThRST()
 
 class THead(Symbol):
+    # All deprecated
+    prop_list = ["align", "bgcolor", "char", "charoff", "valign"]
+
     html = "thead"
     md = THeadMD()
     rst = THeadRST()
 
 class TBody(Symbol):
+    # All deprecated
+    prop_list = ["align", "bgcolor", "char", "charoff", "valign"]
+
     html = "tbody"
+    md = TBodyMD()
+    rst = TBodyRST()
+
+class TFoot(Symbol):
+    # All deprecated
+    prop_list = ["align", "bgcolor", "char", "charoff", "valign"]
+
+    html = "tfoot"
     md = TBodyMD()
     rst = TBodyRST()
