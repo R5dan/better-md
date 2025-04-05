@@ -1,6 +1,6 @@
 import typing as t
 
-from ..typing import ATTR_TYPES, ATTRS
+from ..typing import ATTRS
 
 class TEXT(t.TypedDict):
     type: 't.Literal["text"]'

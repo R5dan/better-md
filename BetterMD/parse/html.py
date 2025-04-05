@@ -1,221 +1,210 @@
-from .typing import ELEMENT
+from .typing import ELEMENT, TEXT
+from ..typing import ATTRS
 import typing as t
 
 class HTMLParser:
+    NON_PARSING_TAGS = ['script', 'style', 'textarea']
+
     def __init__(self):
         self.reset()
 
+    @property
+    def children(self):
+        return self.current_tag["children"]
+
     def reset(self):
-        self.current_tag:'t.Optional[ELEMENT]' = None
-        self.dom = []
-        self.state = 'TEXT'
-        self.buffer = ''
-        self.attr_name = ''
-        self.tag_stack = []
+        self.dom:'list[ELEMENT|TEXT]' = []
+        self.buffer = ""
+        self.state = ""
+        self.current_tag = {
+            "type": "element",
+            "name": "dom",
+            "attributes": {},
+            "children": self.dom,
+            "parent": None
+        }
+        self.tag = ""
+        self.non_parsing_content = ""
+        self.in_non_parsing_tag = False
+        self.current_non_parsing_tag = None
+
+    def create_element(self, name:'str', attrs:'ATTRS'=None, children:'list[ELEMENT|TEXT]'=None) -> 'ELEMENT':
+        if children is None:
+            children = []
+
+        if attrs is None:
+            attrs = {}
+
+        return {
+            "type": "element",
+            "name": name,
+            "attributes": attrs,
+            "children": children,
+            "parent": self.current_tag
+        }
+
+    @staticmethod
+    def create_text(content:'str') -> 'TEXT':
+        return {
+            "type": "text",
+            "content": content,
+            "name": "text"
+        }
 
     def parse(self, html:'str') -> 'list[ELEMENT]':
         self.reset()
-
         i = 0
+        
         while i < len(html):
             char = html[i]
+            #print(char, end="")
+            if self.in_non_parsing_tag:
+                closing_tag = f"</{self.current_non_parsing_tag}>"
+                if html[i:i+len(closing_tag)].lower() == closing_tag.lower():
+                    if self.current_non_parsing_tag.lower() == "script":
+                        print("CLOSING SCRIPT")
+                    # Found closing tag, create element with unparsed content
+                    self.children.append(self.create_text(self.non_parsing_content))
+                    self.current_tag = self.current_tag["parent"]
 
-            if self.state == 'TEXT':
-                if char == '<':
-                    if self.buffer.strip():
-                        self.handle_text(self.buffer)
-                    self.buffer = ''
-                    self.state = 'TAG_START'
+                    self.in_non_parsing_tag = False
+                    self.current_non_parsing_tag = None
+                    self.non_parsing_content = ""
+                    i += len(closing_tag)
                 else:
-                    self.buffer += char
+                    self.non_parsing_content += char
+                    i += 1
+                continue
 
-            elif self.state == 'TAG_START':
-                if char == '/':
-                    self.state = 'CLOSING_TAG'
-                elif char == '!':
-                    self.state = 'COMMENT_OR_DOCTYPE'
-                    self.buffer = '!'
+            elif char == '<':
+                if self.buffer:
+                    self.children.append(self.create_text(self.buffer))
+                    self.buffer = ""
+
+                # Check for comment
+                if html[i:i+4] == '<!--':
+                    i = self.handle_comment(html, i+4)
+                elif html[i + 1] == '/':
+                    # Closing tag
+                    i = self.handle_closing_tag(html, i + 2)
+                    if self.current_tag["parent"] is not None:
+                        self.current_tag = self.current_tag["parent"]
                 else:
-                    self.state = 'TAG_NAME'
-                    self.buffer = char
+                    # Opening tag
+                    i = self.handle_opening_tag(html, i + 1)
+                    # Check if we entered a non-parsing tag
+                    if self.tag.lower() in self.NON_PARSING_TAGS:
+                        self.in_non_parsing_tag = True
+                        self.current_non_parsing_tag = self.tag
+            else:
+                self.buffer += char
+                i += 1
 
-            elif self.state == 'TAG_NAME':
-                if char.isspace():
-                    self.current_tag = {"type": "element", 'name': self.buffer, 'attributes': {}, 'children': []}
-                    self.buffer = ''
-                    self.state = 'BEFORE_ATTRIBUTE_NAME'
-                elif char == '>':
-                    self.current_tag = {"type": "element", 'name': self.buffer, 'attributes': {}, 'children': []}
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                elif char == '/':
-                    self.current_tag = {"type": "element", 'name': self.buffer, 'attributes': {}, 'children': []}
-                    self.state = 'SELF_CLOSING_TAG'
-                else:
-                    self.buffer += char
+        if self.buffer:
+            self.dom.append(self.create_text(self.buffer))
+        
+        return self.dom
 
-            elif self.state == 'BEFORE_ATTRIBUTE_NAME':
-                if char.isspace():
-                    pass
-                elif char == '>':
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                elif char == '/':
-                    self.state = 'SELF_CLOSING_TAG'
-                else:
-                    self.attr_name = char
-                    self.state = 'ATTRIBUTE_NAME'
+    def handle_opening_tag(self, html:'str', start:'int') -> 'int':
+        i = start
+        self.tag = ""
+        attrs:'dict[str, t.Union[str, bool, int, float]]' = {}
 
-            elif self.state == 'ATTRIBUTE_NAME':
-                if char.isspace():
-                    self.current_tag['attributes'][self.attr_name] = ''
-                    self.state = 'AFTER_ATTRIBUTE_NAME'
-                elif char == '=':
-                    self.state = 'BEFORE_ATTRIBUTE_VALUE'
-                elif char == '>':
-                    self.current_tag['attributes'][self.attr_name] = ''
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                elif char == '/':
-                    self.current_tag['attributes'][self.attr_name] = ''
-                    self.state = 'SELF_CLOSING_TAG'
-                else:
-                    self.attr_name += char
-
-            elif self.state == 'AFTER_ATTRIBUTE_NAME':
-                if char.isspace():
-                    pass
-                elif char == '=':
-                    self.state = 'BEFORE_ATTRIBUTE_VALUE'
-                elif char == '>':
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                elif char == '/':
-                    self.state = 'SELF_CLOSING_TAG'
-                else:
-                    self.current_tag['attributes'][self.attr_name] = ''
-                    self.attr_name = char
-                    self.state = 'ATTRIBUTE_NAME'
-
-            elif self.state == 'BEFORE_ATTRIBUTE_VALUE':
-                if char.isspace():
-                    pass
-                elif char == '"':
-                    self.buffer = ''
-                    self.state = 'ATTRIBUTE_VALUE_DOUBLE_QUOTED'
-                elif char == "'":
-                    self.buffer = ''
-                    self.state = 'ATTRIBUTE_VALUE_SINGLE_QUOTED'
-                elif char == '>':
-                    self.current_tag['attributes'][self.attr_name] = ''
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                else:
-                    self.buffer = char
-                    self.state = 'ATTRIBUTE_VALUE_UNQUOTED'
-
-            elif self.state == 'ATTRIBUTE_VALUE_DOUBLE_QUOTED':
-                if char == '"':
-                    self.current_tag['attributes'][self.attr_name] = self.buffer
-                    self.buffer = ''
-                    self.state = 'AFTER_ATTRIBUTE_VALUE_QUOTED'
-                else:
-                    self.buffer += char
-
-            elif self.state == 'ATTRIBUTE_VALUE_SINGLE_QUOTED':
-                if char == "'":
-                    self.current_tag['attributes'][self.attr_name] = self.buffer
-                    self.buffer = ''
-                    self.state = 'AFTER_ATTRIBUTE_VALUE_QUOTED'
-                else:
-                    self.buffer += char
-
-            elif self.state == 'ATTRIBUTE_VALUE_UNQUOTED':
-                if char.isspace():
-                    self.current_tag['attributes'][self.attr_name] = self.buffer
-                    self.buffer = ''
-                    self.state = 'BEFORE_ATTRIBUTE_NAME'
-                elif char == '>':
-                    self.current_tag['attributes'][self.attr_name] = self.buffer
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                elif char == '/':
-                    self.current_tag['attributes'][self.attr_name] = self.buffer
-                    self.buffer = ''
-                    self.state = 'SELF_CLOSING_TAG'
-                else:
-                    self.buffer += char
-
-            elif self.state == 'AFTER_ATTRIBUTE_VALUE_QUOTED':
-                if char.isspace():
-                    self.state = 'BEFORE_ATTRIBUTE_NAME'
-                elif char == '/':
-                    self.state = 'SELF_CLOSING_TAG'
-                elif char == '>':
-                    self.handle_tag_open(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                else:
-                    self.state = 'BEFORE_ATTRIBUTE_NAME'
-                    i -= 1  # Reconsider this character
-
-            elif self.state == 'SELF_CLOSING_TAG':
-                if char == '>':
-                    self.handle_tag_self_closing(self.current_tag)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                else:
-                    # Error handling
-                    pass
-
-            elif self.state == 'CLOSING_TAG':
-                if char == '>':
-                    self.handle_tag_close(self.buffer)
-                    self.buffer = ''
-                    self.state = 'TEXT'
-                else:
-                    self.buffer += char
-
-            # Additional states would be implemented here
-
+        # Get tag name
+        while i < len(html) and not html[i].isspace() and html[i] != '>':
+            self.tag += html[i]
             i += 1
 
-        # Handle any remaining text
-        if self.state == 'TEXT' and self.buffer.strip():
-            self.handle_text(self.buffer)
+        # Skip whitespace
+        while i < len(html) and html[i].isspace():
+            i += 1
+
+        # Parse attributes
+        while i < len(html) and html[i] != '>' and html[i:i+1] != '/>':
+            if html[i].isspace():
+                i += 1
+                continue
+
+            # Get attribute name
+            attr = ""
+            while i < len(html) and not html[i].isspace() and html[i] != '=' and html[i] != '>':
+                attr += html[i]
+                print(f"ATTR: '{html[i:i+2]}' ('{html[i]}','{html[i+1]}','{html[i+2]}')") if attr == "/" else None
+                i += 1
             
-        return self.dom
+            if attr == "/" and html[i-1:i+1] == "/>":
+                break
 
-    def handle_tag_open(self, tag):
-        if len(self.tag_stack) > 0:
-            self.tag_stack[-1]['children'].append(tag)
+            # Skip whitespace
+            while i < len(html) and html[i].isspace():
+                i += 1
+
+            value = True  # Default for boolean attributes
+
+            # Get attribute value if it exists
+            if i < len(html) and html[i] == '=':
+                i += 1
+                # Skip whitespace
+                while i < len(html) and html[i].isspace():
+                    i += 1
+
+                quote = html[i] if html[i] in '"\'`' else None
+                if quote:
+                    i += 1
+                    value = ""
+                    while i < len(html) and html[i] != quote:
+                        value += html[i]
+                        i += 1
+                    i += 1  # Skip closing quote
+                else:
+                    value = ""
+                    while i < len(html) and not html[i].isspace() and html[i] != '>':
+                        value += html[i]
+                        i += 1
+
+            if attr:
+                attrs[attr] = value
+
+            # Skip whitespace
+            while i < len(html) and html[i].isspace():
+                i += 1
+
+        # Handle self-closing tags
+        tag = self.create_element(self.tag, attrs)
+        print(self.current_tag['name'], tag['name'])
+        is_self_closing = html[i-1] == '/'
+        if is_self_closing:
+            print("SELF CLOSING")
+            self.children.append(tag)
         else:
-            self.dom.append(tag)
+            self.children.append(tag)
+            self.current_tag = tag
 
-        self.tag_stack.append(tag)
+        return i + 1
 
-    def handle_tag_self_closing(self, tag):
-        if len(self.tag_stack) > 0:
-            self.tag_stack[-1]['children'].append(tag)
-        else:
-            self.dom.append(tag)
+    def handle_closing_tag(self, html:'str', start:'int') -> 'int':
+        i = start
+        tag = ""
+        
+        # Get tag name
+        while i < len(html) and html[i] != '>':
+            tag += html[i]
+            i += 1
+        self.tag = tag
+        return i + 1
 
-    def handle_tag_close(self, tag_name):
-        if len(self.tag_stack) > 0 and self.tag_stack[-1]['name'] == tag_name:
-            self.tag_stack.pop()
-
-    def handle_text(self, text):
-        text_node = {'type': 'text', 'content': text, 'name': 'text'}
-        if len(self.tag_stack) > 0:
-            self.tag_stack[-1]['children'].append(text_node)
-        else:
-            self.dom.append(text_node)
-
-    def get_dom(self):
-        return self.dom
+    def handle_comment(self, html:'str', start:'int') -> 'int':
+        i = start
+        comment = ""
+        
+        # Get comment content until -->
+        while i < len(html) - 2:
+            if html[i:i+3] == '-->':
+                break
+            comment += html[i]
+            i += 1
+        
+        # Create comment element
+        self.children.append(self.create_element("comment", children=[self.create_text(comment)]))
+        
+        return i + 3  # Skip past -->

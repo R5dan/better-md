@@ -3,24 +3,11 @@ from ..html import CustomHTML
 from ..typing import ATTR_TYPES
 
 import typing as t
-from dataclasses import dataclass
-from enum import Enum, auto
-
-class SelectorType(Enum):
-    CLASS = auto()
-    ID = auto()
-    ELEMENT = auto()
-    CUSTOM = auto()
 
 StyleValue = t.Union[str, int, float, tuple[t.Union[str, int, float], ...]]
 StyleDict = dict[str, t.Union[StyleValue, 'StyleDict']]
 
-@dataclass
-class StyleRule:
-    property: 'str'
-    value: 't.Union[str, int, float]'
-
-class HTML(CustomHTML['Style']):
+class HTML(CustomHTML):
     def verify(self, text) -> bool:
         return text.lower() == "style"
 
@@ -68,16 +55,12 @@ class HTML(CustomHTML['Style']):
 
     def to_html(self, inner, symbol, parent):
         style_str = []
+        print("STYLES: ", symbol.style)
         
         for selector, rules in symbol.style.items():
             style_str.extend(self._process_styles(selector, rules))
-        
-        return "\n".join([
-            "<style>",
-            "\n".join(style_str),
-            symbol.raw,
-            "</style>"
-        ])
+
+        return f"<style>{'\n'.join(style_str)}\n{symbol.raw}\n</style>"
 
 
 class Style(Symbol):  

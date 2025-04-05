@@ -16,11 +16,11 @@ class Collection:
     def remove_symbol(self, symbol:'type[Symbol]'):
         self.symbols.remove(symbol)
 
-    def find_symbol(self, name:'str', raise_errors:'bool'=False) -> 't.Union[type[Symbol], t.Union[None, t.NoReturn]]':
+    def find_symbol(self, name:'str', raise_errors:'bool'=False) -> 't.Optional[type[Symbol]]':
         for symbol in self.symbols:
-            if (isinstance(symbol.html, CustomHTML) and symbol.html.verify(name)) or 
-                (isinstance(symbol.html, str) and symbol.html.lower() == name.lower()):
+            if symbol.__qualname__.lower() == name.lower():
                 return symbol
+
 
         if raise_errors:
             raise ValueError(f"Symbol `{name}` not found in collection, if using default symbols it may not be supported.")

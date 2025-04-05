@@ -4,26 +4,18 @@ from ..markdown import CustomMarkdown
 from ..html import CustomHTML
 from ..rst import CustomRst
 from ..parse import HTMLParser, MDParser, ELEMENT, TEXT, Collection
-from ..utils import List
-from ..typing import ATTRS, ATTR_TYPES
+from ..utils import List, set_recursion_limit
+from ..typing import ATTR_TYPES
+
+set_recursion_limit(10000)
 
 class Symbol:
-    styles: 'dict[str, str]' = {}
-    classes: 'list[str]' = []
     html: 't.Union[str, CustomHTML]' = ""
-    props: 'dict[str, t.Union[str, bool, int, float, list, dict]]' = {}
     prop_list: 'list[str]' = []
-    vars:'dict[str,str]' = {}
-    children:'list[Symbol]' = []
     md: 't.Union[str, CustomMarkdown]' = ""
     rst: 't.Union[str, CustomRst]' = ""
-    parent:'Symbol' = None
-    prepared:'bool' = False
     nl:'bool' = False
     block: 'bool' = False
-
-    html_written_props = ""
-
     collection = Collection()
     html_parser = HTMLParser()
     md_parser = MDParser()
@@ -32,25 +24,29 @@ class Symbol:
         cls.collection.add_symbols(cls)
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, styles:'dict[str,ATTR_TYPES]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props):
-        if styles == None:
+    def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props:'ATTR_TYPES'):
+        self.parent:'Symbol' = None
+        self.prepared:'bool' = False
+        self.html_written_props = ""
+
+        if styles is None:
             styles = {}
-        if classes == None:
+        if classes is None:
             classes = []
-        if inner == None:
+        if inner is None:
             inner = []
 
-        self.styles = styles
-        self.classes = classes
-        self.children = list(inner) or []
-        self.props = props
+        self.styles: 'dict[str, str]' = styles
+        self.classes: 'list[str]' = classes
+        self.children:'list[Symbol]'  = list(inner) or []
+        self.props: 'dict[str, ATTR_TYPES]' = props
 
     def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
-        if inner == None:
+        if inner is None:
             inner = []
-        if styles == None:
+        if styles is None:
             styles = {}
-        if classes == None:
+        if classes is None:
             classes = []
 
         styles.update(self.styles)
@@ -91,30 +87,37 @@ class Symbol:
 
         self.children[i-1] = new
 
+    def handle_props(self, p):
+        props = {**({"class": self.classes} if self.classes else {}), **({"style": self.styles} if self.styles else {}), **self.props}
+        prop_list = []
+        for k, v in props.items():
+            if isinstance(v, bool) or v == "":
+                prop_list.append(f"{k}" if v else "")
+            elif isinstance(v, (int, float, str)):
+                prop_list.append(f'{k}="{v}"')
+            elif isinstance(v, list):
+                prop_list.append(f'{k}="{" ".join(v)}"')
+            elif isinstance(v, dict):
+                prop_list.append(f'{k}="{"; ".join([f"{k}:{v}" for k,v in v.items()])}"')
+            else:
+                raise TypeError(f"Unsupported type for prop {k}: {type(v)}")
+        print(props) if p else None
+        return (" " + " ".join(filter(None, prop_list))) if prop_list else ""
 
-    def to_html(self, indent=1) -> 'str':
+    def to_html(self, indent=0) -> 'str':
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
 
-        def handle_props(props):
-            props = []
-            for k, v in self.props.items():
-                if isinstance(v, bool) or v == "":
-                    props.append(f"{k}" if v else "")
-                elif isinstance(v, (int, float, str)):
-                    props.append(f"{k}={'"'}{v}{'"'}")
-                elif isinstance(v, list):
-                    props.append(f"{k}={'"'}{' '.join(v)}{'"'}")
-                elif isinstance(v, dict):
-                    props.append(f"{k}={'{'}{' '.join([f'{k}:{v}' for k,v in v.items()])}{'}'}")
-                else:
-                    raise TypeError(f"Unsupported type for prop {k}: {type(v)}")
+        inner_HTML = "\n".join([
+            e.to_html(0) if not (len(self.children) == 1 and isinstance(e.html, str) and e.html == "text") 
+            else e.to_html(0) for e in self.children
+        ])
 
-            return ' '.join(props)
+        if inner_HTML:
+            return f"<{self.html}{self.handle_props(False)}>{inner_HTML}</{self.html}>"
+        else:
+            return f"<{self.html}{self.handle_props(False)} />"
 
-
-        inner_HTML = f"\n{"    "*indent}".join([e.to_html(indent+1) if not (len(self.children) == 1 and self.children[0].html == "text") else e.to_html(0) for e in self.children])
-        return f"<{self.html}{" " if self.styles or self.classes or self.props else ""}{f"class={'"'}{' '.join(self.classes) or ''}{'"'}" if self.classes else ""}{" " if (self.styles or self.classes) and self.props else ""}{f"style={'"'}{' '.join([f'{k}:{v}' for k,v in self.styles.items()]) or ""}{'"'}" if self.styles else ""}{" " if (self.styles or self.classes) and self.props else ""}{handle_props(self.props)}{f">{"\n" if len(self.children) > 1 else ""}{inner_HTML}{"\n" if len(self.children) > 1 else ""}</{self.html}>" if inner_HTML else f" />"}"
 
     def to_md(self) -> 'str':
         if isinstance(self.md, CustomMarkdown):
@@ -142,7 +145,11 @@ class Symbol:
     @classmethod
     def from_html(cls, text:'str') -> 'List[Symbol]':
         parsed = cls.html_parser.parse(text)
-        return List([cls.collection.find_symbol(elm['name'] , raise_errors=True).parse(elm) for elm in parsed])
+        with open("t2.json", "w") as f:
+            f.write(repr(parsed))
+        return List([cls.collection.find_symbol(elm['name'], raise_errors=True).parse(elm) for elm in parsed])
+
+
 
     @classmethod
     def from_md(cls, text: str) -> 'List[Symbol]':
@@ -151,7 +158,7 @@ class Symbol:
 
     @classmethod
     def parse(cls, text:'ELEMENT|TEXT') -> 'Symbol':
-        def handle_element(element:'ELEMENT|TEXT') -> 'Symbol':
+        def handle_element(element:'ELEMENT|TEXT'):
             if element['type'] == 'text':
                 text = cls.collection.find_symbol("text", raise_errors=True)
                 assert text is not None, "`collection.find_symbol` is broken"
@@ -165,12 +172,35 @@ class Symbol:
         if text["type"] == "text":
             return cls.collection.find_symbol("text", raise_errors=True)(text["content"])
 
-        styles = text["attributes"].get("style", {})
-        classes = list(filter(lambda c: bool(c), text["attributes"].pop("class", "")))
+        # Extract attributes directly from the attributes dictionary
+        attributes = text["attributes"]
+        
+        # Handle class attribute separately if it exists
+        classes = []
+        if "class" in attributes:
+            classes = attributes["class"].split() if isinstance(attributes["class"], str) else attributes["class"]
+            del attributes["class"]
+        
+        # Handle style attribute separately if it exists
+        styles = {}
+        if "style" in attributes:
+            style_str = attributes["style"]
+            if isinstance(style_str, str):
+                styles = dict(item.split(":") for item in style_str.split(";") if ":" in item)
+            elif isinstance(style_str, dict):
+                styles = style_str
+            del attributes["style"]
 
-        return cls(styles, classes, inner=[handle_element(elm) for elm in text["children"]], **text["attributes"])
+        inner=[handle_element(elm) for elm in text["children"]]
 
-    def get_prop(self, prop, default="") -> 'str':
+        return cls(
+            styles=styles,
+            classes=classes,
+            inner=inner,
+            **attributes
+        )
+
+    def get_prop(self, prop, default=""):
         return self.props.get(prop, default)
 
     def set_prop(self, prop, value):
@@ -182,6 +212,6 @@ class Symbol:
         return item in self.children
     
     def __str__(self):
-        return f"<{self.html}{" " if self.styles or self.classes or self.props else ""}{f"class={'"'}{' '.join(self.classes) or ''}{'"'}" if self.classes else ""}{" " if (self.styles or self.classes) and self.props else ""}{f"style={'"'}{' '.join([f'{k}:{v}' for k,v in self.styles.items()]) or ""}{'"'}" if self.styles else ""}{" " if (self.styles or self.classes) and self.props else ""}{' '.join([f'{k}={'"'}{v}{'"'}' if v != "" else f'{k}' for k,v in self.props.items()])}{f">{"\n" if len(self.children) > 1 else ""}{"\n" if len(self.children) > 1 else ""}{len(self.children)}</{self.html}>"}"
+        return f"<{self.html}{self.handle_props()} />"
 
     __repr__ = __str__

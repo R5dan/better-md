@@ -12,7 +12,7 @@ class MD(CustomMarkdown):
         
         # If it's a code block (has language or multiline)
         if language or "\n" in inner:
-            return f"```\n{language}\n{inner}\n```\n"
+            return f"\n```{language}\n{inner}\n```\n" # Cant use block as inline code isn't a block
 
         # Inline code
         return f"`{inner}`"

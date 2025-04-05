@@ -1,4 +1,6 @@
 from .symbol import Symbol
+from .comment import Comment
+from .svg import *
 
 from .text_formatting import Strong, Em, B
 
