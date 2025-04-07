@@ -57,12 +57,10 @@ class HTMLParser:
         
         while i < len(html):
             char = html[i]
-            #print(char, end="")
             if self.in_non_parsing_tag:
                 closing_tag = f"</{self.current_non_parsing_tag}>"
                 if html[i:i+len(closing_tag)].lower() == closing_tag.lower():
                     if self.current_non_parsing_tag.lower() == "script":
-                        print("CLOSING SCRIPT")
                     # Found closing tag, create element with unparsed content
                     self.children.append(self.create_text(self.non_parsing_content))
                     self.current_tag = self.current_tag["parent"]
@@ -129,7 +127,6 @@ class HTMLParser:
             attr = ""
             while i < len(html) and not html[i].isspace() and html[i] != '=' and html[i] != '>':
                 attr += html[i]
-                print(f"ATTR: '{html[i:i+2]}' ('{html[i]}','{html[i+1]}','{html[i+2]}')") if attr == "/" else None
                 i += 1
             
             if attr == "/" and html[i-1:i+1] == "/>":
@@ -171,10 +168,8 @@ class HTMLParser:
 
         # Handle self-closing tags
         tag = self.create_element(self.tag, attrs)
-        print(self.current_tag['name'], tag['name'])
         is_self_closing = html[i-1] == '/'
         if is_self_closing:
-            print("SELF CLOSING")
             self.children.append(tag)
         else:
             self.children.append(tag)

@@ -7,7 +7,7 @@ import typing as t
 StyleValue = t.Union[str, int, float, tuple[t.Union[str, int, float], ...]]
 StyleDict = dict[str, t.Union[StyleValue, 'StyleDict']]
 
-class HTML(CustomHTML):
+class HTML(CustomHTML['Style']):
     def verify(self, text) -> bool:
         return text.lower() == "style"
 
@@ -55,7 +55,6 @@ class HTML(CustomHTML):
 
     def to_html(self, inner, symbol, parent):
         style_str = []
-        print("STYLES: ", symbol.style)
         
         for selector, rules in symbol.style.items():
             style_str.extend(self._process_styles(selector, rules))

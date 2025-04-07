@@ -16,6 +16,8 @@ class Symbol:
     rst: 't.Union[str, CustomRst]' = ""
     nl:'bool' = False
     block: 'bool' = False
+    self_closing: 'bool' = False
+
     collection = Collection()
     html_parser = HTMLParser()
     md_parser = MDParser()
@@ -101,7 +103,6 @@ class Symbol:
                 prop_list.append(f'{k}="{"; ".join([f"{k}:{v}" for k,v in v.items()])}"')
             else:
                 raise TypeError(f"Unsupported type for prop {k}: {type(v)}")
-        print(props) if p else None
         return (" " + " ".join(filter(None, prop_list))) if prop_list else ""
 
     def to_html(self, indent=0) -> 'str':
@@ -113,7 +114,7 @@ class Symbol:
             else e.to_html(0) for e in self.children
         ])
 
-        if inner_HTML:
+        if inner_HTML or not self.self_closing:
             return f"<{self.html}{self.handle_props(False)}>{inner_HTML}</{self.html}>"
         else:
             return f"<{self.html}{self.handle_props(False)} />"
@@ -145,8 +146,20 @@ class Symbol:
     @classmethod
     def from_html(cls, text:'str') -> 'List[Symbol]':
         parsed = cls.html_parser.parse(text)
+        import json as j
+        def handle(dict:'dict'):
+            if dict['type'] == 'element':
+                dict.pop("parent")
+
+                for c in dict['children']:
+                    handle(c)
+
+            return dict
+
         with open("t2.json", "w") as f:
-            f.write(repr(parsed))
+            
+            d = j.dumps([handle(elm) for elm in parsed.copy()])
+            f.write(d)
         return List([cls.collection.find_symbol(elm['name'], raise_errors=True).parse(elm) for elm in parsed])
 
 
