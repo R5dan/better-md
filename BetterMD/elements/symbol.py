@@ -146,20 +146,6 @@ class Symbol:
     @classmethod
     def from_html(cls, text:'str') -> 'List[Symbol]':
         parsed = cls.html_parser.parse(text)
-        import json as j
-        def handle(dict:'dict'):
-            if dict['type'] == 'element':
-                dict.pop("parent")
-
-                for c in dict['children']:
-                    handle(c)
-
-            return dict
-
-        with open("t2.json", "w") as f:
-            
-            d = j.dumps([handle(elm) for elm in parsed.copy()])
-            f.write(d)
         return List([cls.collection.find_symbol(elm['name'], raise_errors=True).parse(elm) for elm in parsed])
 
 
