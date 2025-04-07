@@ -60,7 +60,6 @@ class HTMLParser:
             if self.in_non_parsing_tag:
                 closing_tag = f"</{self.current_non_parsing_tag}>"
                 if html[i:i+len(closing_tag)].lower() == closing_tag.lower():
-                    if self.current_non_parsing_tag.lower() == "script":
                     # Found closing tag, create element with unparsed content
                     self.children.append(self.create_text(self.non_parsing_content))
                     self.current_tag = self.current_tag["parent"]
