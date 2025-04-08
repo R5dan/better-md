@@ -10,3 +10,9 @@
 -   [ ] Add innerline support
 -   [ ] Add escape chars (\\)
 -   [ ] Add other languages
+
+
+## Inportant
+
+Fix table.py
+Delete this section

@@ -4,4 +4,9 @@ class P(Symbol):
     html = "p"
     md = ""
     rst = "\n\n"
-    nl = True
+    block = True
+
+class Pre(Symbol):
+    html = "pre"
+    md = ""
+    rst = ""
