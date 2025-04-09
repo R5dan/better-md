@@ -13,3 +13,9 @@
         -   [x] Add escape chars (\\)
     -   [ ] Add RST parsing
 -   [ ] Add other languages
+
+
+## Inportant
+
+Fix table.py
+Delete this section

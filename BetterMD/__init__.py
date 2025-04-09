@@ -1,6 +1,9 @@
+import logging
 from .elements import *
-from .elements import Symbol
-from .parse import Collection, HTMLParser, MDParser
+from .html import CustomHTML
+from .markdown import CustomMarkdown
+from .rst import CustomRst
+from .parse import HTMLParser, MDParser, Collection
 
 class HTML:
     @staticmethod
@@ -36,4 +39,10 @@ class MD:
         text = r.get(url).text
         return Symbol.from_md(text)
 
-__all__ = ["HTML", "MD", "Symbol", "Collection", "HTMLParser", "MDParser"]
+def enable_debug_mode():
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger("BetterMD")
+
+    return logger
+
+__all__ = ["HTML", "MD", "Symbol", "Collection", "HTMLParser", "MDParser", "CustomHTML", "CustomMarkdown", "CustomRst", "enable_debug_mode"]

@@ -67,27 +67,27 @@ class Symbol:
 
     def remove_child(self, symbol:'Symbol'):
         self.children.remove(symbol)
+    
+    def extend_children(self, symbols:'list[Symbol]'):
+        self.children.extend(symbols)
 
     def has_child(self, child:'type[Symbol]'):
         for e in self.children:
             if isinstance(e, child):
                 return e
-
         return False
 
-    def prepare(self, parent:'Symbol'):
+    def prepare(self, parent:'Symbol', *args, **kwargs):
         self.prepared = True
         self.parent = parent
         for symbol in self.children:
-            symbol.prepare(self)
+            symbol.prepare(self, *args, **kwargs)
 
         return self
 
     def replace_child(self, old:'Symbol', new:'Symbol'):
         i = self.children.index(old)
-        self.children.remove(old)
-
-        self.children[i-1] = new
+        self.children[i] = new
 
     def handle_props(self, p):
         props = {**({"class": self.classes} if self.classes else {}), **({"style": self.styles} if self.styles else {}), **self.props}
@@ -119,7 +119,6 @@ class Symbol:
         else:
             return f"<{self.html}{self.handle_props(False)} />"
 
-
     def to_md(self) -> 'str':
         if isinstance(self.md, CustomMarkdown):
             return self.md.to_md(self.children, self, self.parent)
@@ -147,8 +146,6 @@ class Symbol:
     def from_html(cls, text:'str') -> 'List[Symbol]':
         parsed = cls.html_parser.parse(text)
         return List([cls.collection.find_symbol(elm['name'], raise_errors=True).parse(elm) for elm in parsed])
-
-
 
     @classmethod
     def from_md(cls, text: str) -> 'List[Symbol]':

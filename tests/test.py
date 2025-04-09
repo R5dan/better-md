@@ -1,4 +1,6 @@
-from BetterMD import H1, H2, Text, Div, LI, OL, UL, A, Strong, Table, Tr, Td, Th, Blockquote, Em, Input, THead
+from BetterMD import H1, H2, Text, Div, LI, OL, UL, A, B, Table, Tr, Td, Th, THead, TBody, Blockquote, I, Input, CustomRst, CustomHTML, CustomMarkdown, enable_debug_mode
+
+# enable_debug_mode()
 
 print(H1(inner=[Text("Hi")]).to_html())
 print(H1(inner=[Text("Hi")]).to_md())
@@ -34,44 +36,64 @@ print(
 )
 
 # Bold text
-print(Strong(inner=[Text("Bold text")]).prepare(None).to_md())  # **Bold text**
+print(B(inner=[Text("Bold text")]).prepare(None).to_md())  # **Bold text**
 
 # Table example
-print("RST",
-    Table(
+t=Table(
         inner=[
-          THead(
-            inner=[
-            Tr(
+            THead(
                 inner=[
-                    Th(inner=[Text("Header 1")]),
-                    Th(inner=[Text("Header 2")])
-                ],
-            )
-            ]),
-            Tr(
+                    Tr(
+                        inner=[
+                            Th(inner=[Text("Header 1")], styles={"text-align":"left"}),
+                            Th(inner=[Text("Header 2 WIDER")], styles={"text-align":"center"}),
+                            Th(inner=[Text("Header 3")], styles={"text-align":"right"}),
+                            Th(inner=[Text("SMALL")]),
+                            Th()
+                        ],
+                    ),
+                ]
+            ),
+            TBody(
                 inner=[
-                    Td(inner=[Text("Cell 1")]),
-                    Td(inner=[Text("Cell 2")])
+                    Tr(
+                        inner=[
+                            Td(inner=[Text("Row 1 Cell 1 EXTRA LONG")]),
+                            Td(inner=[Text("Row 1 Cell 2")]),
+                            Td(inner=[Text("Row 1 Cell 3")]),
+                            Td(inner=[Text("SMALL")]),
+                            Td()
+                        ],
+                    ),
+                    Tr(
+                        inner=[
+                            Td(inner=[Text("Row 2 Cell 1")]),
+                            Td(inner=[Text("Row 2 Cell 2")]),
+                            Td(inner=[Text("Row 2 Cell 3 EXTRA LONG")]),
+                            Td(inner=[Text("SMALL")]),
+                            Td(inner=[Text("2")])
+                        ]
+                    )
                 ]
             )
         ]
-    ).prepare(None).to_rst(), sep="\n"
+    ).prepare()
+
+print(
+    "\n",
+    t.to_rst(),
+    sep=""
 )
-"""
-|Header 1|Header 2|
-|---|---|
-|Cell 1|Cell 2|
-"""
+
 
 # Blockquote with formatting
 print(
     Blockquote(
         inner=[
             Text("A quote with "),
-            Strong(inner=[Text("bold")]),
+            B(inner=[Text("bold")]),
             Text(" and "),
-            Em(inner=[Text("italic")]),
+            I(inner=[Text("italic")]),
             Text(" text.")
         ]
     ).prepare(None).to_md()
