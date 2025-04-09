@@ -120,7 +120,19 @@ class ThRST(CustomRst['Th']):
             return "".center(width)
         return f"**{content}**".center(width)
 
+class ThRST(CustomRst):
+    def to_rst(self, inner, symbol, parent):
+        return " ".join([e.to_rst() for e in inner])
+
+class TBodyRST(CustomRst):
+    def to_rst(self, inner, symbol, parent):
+        # This is now handled by TableRST
+        return ""
+
 class Table(Symbol):
+    # All deprecated
+    prop_list = ["align", "bgcolor", "border", "cellpadding", "cellspacing", "frame", "rules", "summary", "width"]
+
     html = "table"
     md = TableMD()
     rst = TableRST()
@@ -395,6 +407,10 @@ class Tr(Symbol):
         return super().prepare(parent, table=table, row=self, *args, **kwargs)
 
 class Td(Symbol):
+    prop_list = ["colspan", "rowspan", "headers"]
+    # Deprecated
+    prop_list +=  ["abbr", "align", "axis", "bgcolor", "char", "charoff", "height", "scope", "valign", "width"]
+
     html = "td"
     md = TdMD()
     rst = TdRST()
@@ -424,6 +440,11 @@ class Td(Symbol):
         return len(self.data)
 
 class Th(Symbol):
+    prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
+    # Deprecated
+    prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
+
+
     html = "th"
     md = ThMD()
     rst = ThRST()
