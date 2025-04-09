@@ -1,16 +1,18 @@
-from .symbol import Symbol, List
+from .symbol import Symbol
+from ..utils import List
 from ..markdown import CustomMarkdown
 from ..rst import CustomRst
-from .h import H1, H2, H3, H4, H5, H6
 from .text import Text
 import logging
 import typing as t
 
 if t.TYPE_CHECKING:
     # Wont be imported at runtime
-    import pandas as pd # If not installed, will not affedt anything at runtime
+    import pandas as pd # If not installed, will not affect anything at runtime
+
 
 logger = logging.getLogger("BetterMD")
+T = t.TypeVar("T")
 
 class TrMD(CustomMarkdown['Tr']):
     def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
@@ -118,14 +120,25 @@ class ThRST(CustomRst['Th']):
             return "".center(width)
         return f"**{content}**".center(width)
 
+class ThRST(CustomRst):
+    def to_rst(self, inner, symbol, parent):
+        return " ".join([e.to_rst() for e in inner])
 
+class TBodyRST(CustomRst):
+    def to_rst(self, inner, symbol, parent):
+        # This is now handled by TableRST
+        return ""
 
 class Table(Symbol):
+    # All deprecated
+    prop_list = ["align", "bgcolor", "border", "cellpadding", "cellspacing", "frame", "rules", "summary", "width"]
+
     html = "table"
     md = TableMD()
     rst = TableRST()
     head:'THead' = None
     body:'TBody' = None
+    foot:'TFoot' = None
 
     cols: 'dict[Th, list[Td]]' = {}
     headers: 'list[Th]' = []
@@ -153,7 +166,7 @@ class Table(Symbol):
         try:
             import pandas as pd
             self = cls()
-            head = THead.from_pandas(list(df.columns))
+            head = THead.from_pandas(df.columns)
             body = TBody.from_pandas(df)
             
             self.head = head
@@ -164,8 +177,9 @@ class Table(Symbol):
             
             logger.debug("Successfully created Table from DataFrame")
             logger.debug(f"Table has {len(self.head.children)} columns and {len(self.body.children)} rows with shape {df.shape}")
-            logger.debug(f"Table head: {self.head.to_pandas()}")
-            logger.debug(f"Table body: {[e.to_list() for e in self.body.children]}")
+            logger.debug(f"Table head: {self.head.to_list()}")
+            logger.debug(f"Table body: {self.body.to_list()}")
+            logger.debug(f"Table foot: {self.foot.to_list()}")
             return self
         except ImportError:
             logger.error("pandas not installed - tables extra required")
@@ -183,37 +197,48 @@ class THead(Symbol):
     md = THeadMD()
 
     table:'Table' = None
-    children:'List[Tr]' = List()
-
-    head:'Tr' = None
+    data:'list[Tr]' = None
 
 
-    def to_pandas(self) -> 'list[str]':
-        return self.to_list()
-    
-    def to_list(self) -> 'list[str]':
+    def to_pandas(self) -> 'pd.Index':
+        import pandas as pd
+        if len(self.data) == 0:
+            pass # Return undefined
+
+        elif len(self.data) == 1:
+            return pd.Index([d.data for d in self.data])
+
+    def to_list(self) -> 'list[list[str]]':
         if not self.prepared:
             self.prepare()
-        
-        return self.children[0].to_list()
-    
-    @classmethod
-    def from_pandas(cls, data:'list[str]'):
-        return cls.from_list(data)
+
+        return [
+            [
+                d.data for d in row.data
+            ] for row in self.data
+        ]
 
     @classmethod
-    def from_list(cls, data:'list[str]'):
+    def from_pandas(cls, data:'pd.Index | pd.MultiIndex'):
         self = cls()
-        tr = Tr.from_list(data)
-        self.add_child(tr)
+
+        self.add_child(Tr.from_pandas(data))
+
+    @classmethod
+    def from_list(cls, data:'list[str]|list[list[str]]'):
+        self = cls()
+        if isinstance(data[0], list):
+            self.extend_children([Tr.from_list(d, head=True) for d in data])
+        else:
+            self.add_child(Tr.from_list(data))
 
         return self
-    
+
     def prepare(self, parent = None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.table.head = self
-        return super().prepare(parent, table=table, head=True, *args, **kwargs)
+        return super().prepare(parent, table=table, head=self, *args, **kwargs)
 
 class TBody(Symbol):
     html = "tbody"
@@ -221,7 +246,7 @@ class TBody(Symbol):
     md = TBodyMD()
 
     table:'Table' = None
-    children:'List[Tr]' = List()
+    data :'list[Tr]' = []
 
     def to_pandas(self):
         if not self.prepared:
@@ -236,94 +261,156 @@ class TBody(Symbol):
     def from_pandas(cls, df:'pd.DataFrame'):
         logger.debug(f"Creating TBody from DataFrame with {len(df)} rows")
         try:
-            import pandas as pd
             self = cls()
-            
+
             for i, row in df.iterrows():
                 tr = Tr.from_pandas(row)
                 self.children.append(tr)
                 logger.debug(f"Added row {i} to TBody")
-            
+
             return self
         except ImportError:
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `from_pandas`")
-    
+        
+    @classmethod
+    def from_list(cls, data:'list[list[str]]'):
+        try:
+            self = cls()
+
+            for row in data:
+                self.add_child(Tr.from_list(row))
+
+        except Exception as e:
+            logger.error(f"Exception occurred in `from_list`: {e}")
+
+    def to_list(self):
+        return [
+            row.to_list() for row in self.data
+        ]
+
     def prepare(self, parent = None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.table.body = self
-        return super().prepare(parent, table=table, head=False, *args, **kwargs)
+        return super().prepare(parent, table=table, head=self, *args, **kwargs)
+
+class TFoot(Symbol):
+    html = "tfoot"
+    md = TBodyMD()
+    rst = TBodyRST()
+
+    table:'Table' = None
+    data :'list[Tr]' = []
+
+    def to_pandas(self):
+        if not self.prepared:
+            self.prepare()
+
+        logger.debug("Converting TFoot to pandas format")
+        data = [e.to_pandas() for e in self.children]
+        logger.debug(f"Converted {len(data)} rows from TFoot")
+        return data
+
+    @classmethod
+    def from_pandas(cls, df:'pd.DataFrame'):
+        logger.debug(f"Creating TFoot from DataFrame with {len(df)} rows")
+        try:
+            self = cls()
+
+            for i, row in df.iterrows():
+                tr = Tr.from_pandas(row)
+                self.children.append(tr)
+                logger.debug(f"Added row {i} to TFoot")
+
+            return self
+        except ImportError:
+            logger.error("pandas not installed - tables extra required")
+            raise ImportError("`tables` extra is required to use `from_pandas`")
+
+    def prepare(self, parent = None, table=None, *args, **kwargs):
+        assert isinstance(table, Table)
+        self.table = table
+        self.table.foot = self
+        return super().prepare(parent, table=table, head=self, *args, **kwargs)
 
 class Tr(Symbol):
     html = "tr"
     md = TrMD()
     rst = TrRST()
 
+    head:'THead|TBody|TFoot' = None
     table:'Table' = None
+    data:'list[t.Union[Td, Th]]' = []
 
-    children:'List[t.Union[Td, Th]]' = List()
-
-    def __init__(self, styles = {}, classes = [], dom = True, inner = [], **props):
-        super().__init__(styles, classes, dom, inner, **props)
-
-        self.is_header = False
-        if isinstance(self.parent, THead):
-            self.is_header = True
-            logger.debug("Tr element identified as header row")
 
     def to_pandas(self):
         if not self.prepared:
             self.prepare()
-        
-        def get(o, f):
-            return [getattr(v, f) for v in o]
+
+        if isinstance(self.head, THead):
+            raise ValueError("This `Tr` is a header row and cannot be converted to a pandas `Series`")
 
         try:
             import pandas as pd
-            if self.is_header:
-                raise ValueError("This `Tr` is a header row and cannot be converted to a pandas `Series`")
-            return pd.Series({h.data: v.data for h, v in zip(self.table.head.head.children, self.children)}, index=self.table.head.to_pandas())
-            
+
+            return pd.Series(
+                [d for d in self.data],
+                self.table.head.to_pandas()
+            )
+
         except ImportError:
             raise ImportError("`tables` extra is required to use `to_pandas`")
 
-    def to_list(self):
-        if not self.prepared:
-            self.prepare()
-            
-        return [e.data for e in self.children]
-    
+    @t.overload
     @classmethod
-    def from_pandas(cls, series:'pd.Series'):
+    def from_pandas(cls, series:'pd.Series', head:'t.Literal[False]'=False): ...
+
+    @t.overload
+    @classmethod
+    def from_pandas(cls, series:'pd.Index', head:'t.Literal[True]'): ...
+
+    @classmethod
+    def from_pandas(cls, series:'pd.Series | pd.Index', head:'bool'=False):
         try:
-            import pandas as pd
             self = cls()
-            self.children.clear()
-            for v in series:
-                td = Td(inner=[Text(v)])
-                self.children.append(td)
+
+            if head:
+                self.extend_children([Th(inner=[Text(d)]) for d in series])
+
+            self.extend_children([Td(inner=[Text(d)]) for d in series])
 
             return self
         except ImportError:
             raise ImportError("`tables` extra is required to use `from_pandas`")
-        
+
+
+    def to_list(self):
+        if not self.prepared:
+            self.prepare()
+
+        return [e.data for e in self.data]
+
     @classmethod
-    def from_list(cls, data:'list[str]'):
+    def from_list(cls, data:'list[str]', head:'bool'=False):
         self = cls()
         for value in data:
-            td = Td(inner=[Text(value)])
+            td = Td(inner=[Text(value)]) if not head else Th(inner=[Text(value)])
             self.children.append(td)
 
         return self
 
-    def prepare(self, parent = None, table=None, head=False, *args, **kwargs):
+    def prepare(self, parent = None, table=None, head:'THead|TBody|TFoot'=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
-        if head: self.table.head.head = self
+        if head: self.head = head
         return super().prepare(parent, table=table, row=self, *args, **kwargs)
 
 class Td(Symbol):
+    prop_list = ["colspan", "rowspan", "headers"]
+    # Deprecated
+    prop_list +=  ["abbr", "align", "axis", "bgcolor", "char", "charoff", "height", "scope", "valign", "width"]
+
     html = "td"
     md = TdMD()
     rst = TdRST()
@@ -338,27 +425,33 @@ class Td(Symbol):
     @property
     def width(self):
         return len(self.data)
-    
+
     def prepare(self, parent = None, table=None, row=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.row = row
 
+        self.row.data.append(self)
         self.header = self.table.headers[self.row.children.index(self)]
         self.table.cols[self.header].append(self)
-        return super().prepare(parent, table=table, *args, **kwargs)
-    
+        return super().prepare(parent, table=table, data=self, *args, **kwargs)
+
     def __len__(self):
         return len(self.data)
 
 class Th(Symbol):
+    prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
+    # Deprecated
+    prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
+
+
     html = "th"
     md = ThMD()
     rst = ThRST()
 
     children:'List[Text]' = List()
     row:'Tr' = None  
-    
+
     def __init__(self, styles: dict[str, str] = {}, classes: list[str] = [], dom: bool = True, inner: list[Symbol] = [], **props):
         super().__init__(styles, classes, dom, inner, **props)
 
@@ -371,7 +464,7 @@ class Th(Symbol):
             return ""
         logger.debug("Th data is not empty")
         return f"**{contents}**"
-    
+
     @property
     def width(self):
         """Width of the data"""
@@ -379,15 +472,16 @@ class Th(Symbol):
             return 0
         return len(self.data)-4
 
-    def prepare(self, parent = None, table=None, row=None,  *args, **kwargs):
+    def prepare(self, parent = None, table=None, row=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.row = row
+
+        self.row.data.append(self)
         self.header = self
-        self.table.headers.append(self)
         self.table.cols[self] = [self]
-        return super().prepare(parent, table=table, *args, **kwargs)
-    
+        return super().prepare(parent, table=table, data=self, *args, **kwargs)
+
     def __len__(self):
         """Width of the element (data + bolding)"""
         return len(self.data)

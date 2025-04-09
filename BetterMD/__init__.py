@@ -1,10 +1,48 @@
 import logging
-from .elements import A, H1, H2, H3, H4, H5, H6, Head, OL, UL, LI, Text, Div, P, Span, Img, B, I, Br, Blockquote, Hr, Table, Tr, Td, Th, THead, TBody, Input, Code
+from .elements import *
 from .html import CustomHTML
 from .markdown import CustomMarkdown
 from .rst import CustomRst
+from .parse import HTMLParser, MDParser, Collection
 
+class HTML:
+    @staticmethod
+    def from_string(html:'str'):
+        return Symbol.from_html(html)
+
+    @staticmethod
+    def from_file(file):
+        return Symbol.from_html(file)
+    
+    @staticmethod
+    def from_url(url):
+        import requests as r
+        text = r.get(url).text
+
+        if text.startswith("<!DOCTYPE html>"):
+            text = text[15:]
+
+        return Symbol.from_html(text)
+
+class MD:
+    @staticmethod
+    def from_string(md:'str'):
+        return Symbol.from_md(md)
+
+    @staticmethod
+    def from_file(file):
+        return Symbol.from_md(file)
+    
+    @staticmethod
+    def from_url(url):
+        import requests as r
+        text = r.get(url).text
+        return Symbol.from_md(text)
 
 def enable_debug_mode():
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger("BetterMD")
+
+    return logger
+
+__all__ = ["HTML", "MD", "Symbol", "Collection", "HTMLParser", "MDParser", "CustomHTML", "CustomMarkdown", "CustomRst", "enable_debug_mode"]

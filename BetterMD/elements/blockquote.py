@@ -2,8 +2,8 @@ from BetterMD.rst.custom_rst import CustomRst
 from .symbol import Symbol
 
 class RST(CustomRst):
-    def to_rst(self, inner, symbol, parent, **kwargs):
-        return "    \n".join([e.to_rst(**kwargs) for e in inner])
+    def to_rst(self, inner, symbol, parent):
+        return "    \n".join([e.to_rst() for e in inner])
         
 
 class Blockquote(Symbol):

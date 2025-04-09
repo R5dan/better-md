@@ -3,19 +3,17 @@ from .symbol import Symbol
 from ..markdown import CustomMarkdown
 
 class MD(CustomMarkdown):
-    def to_md(self, inner, symbol, parent, **kwargs):
-        if inner:
-            raise ValueError("Hr element must not have any children")
+    def to_md(self, inner, symbol, parent):
         return f"---\n"
 
 class RST(CustomRst):
-    def to_rst(self, inner, symbol, parent, **kwargs):
-        if inner:
-            raise ValueError("Hr element must not have any children")
+    def to_rst(self, inner, symbol, parent):
         return "----\n"
 
 class Hr(Symbol):
+    prop_list = ["align", "color", "noshade", "size", "width"]
+
     html = "hr"
     md = MD()
     rst = RST()
-    nl = True 
+    block = True 

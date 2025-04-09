@@ -24,5 +24,5 @@ setup(
             "Operating System :: Microsoft :: Windows",
             "Operating System :: POSIX :: Linux",
         ],
-        url="https://github.com/Betters-Markdown/better_md"
+        url="https://github.com/Better-MD/better-md"
 )

@@ -1,4 +1,4 @@
-# Better-md
+# BetterMD
 
 ## Insallation
 
