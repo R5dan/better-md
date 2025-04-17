@@ -1,8 +1,8 @@
 from .symbol import Symbol
-from ..utils import List
 from ..markdown import CustomMarkdown
 from ..rst import CustomRst
 from .text import Text
+from ..typing import ATTR_TYPES
 import logging
 import typing as t
 import itertools as it
@@ -10,7 +10,6 @@ import itertools as it
 if t.TYPE_CHECKING:
     # Wont be imported at runtime
     import pandas as pd # If not installed, will not affect anything at runtime
-
 
 logger = logging.getLogger("BetterMD")
 T = t.TypeVar("T")
@@ -190,7 +189,7 @@ class Table(Symbol):
     html = "table"
     md = TableMD()
     rst = TableRST()
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+    def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
         self.head:'THead' = None
         self.body:'TBody' = None
         self.foot:'TFoot' = None
@@ -202,17 +201,8 @@ class Table(Symbol):
 
         super().__init__(styles, classes, inner, **props)
 
-    def prepare(self, parent:'Symbol'=None, dom:'list[Symbol]' = None, *args, **kwargs):
-        if dom is None:
-            dom = []
-        dom.append(self)
-
-        self.prepared = True
-        self.parent = parent
-        for symbol in self.children:
-            symbol.prepare(self, *args, **kwargs, dom.copy(), table=self)
-
-        return self
+    def prepare(self, parent: Symbol = None, dom: list[Symbol] = None, *args, **kwargs):
+        return super().prepare(parent, dom, *args, **kwargs, table=self)
 
     def to_pandas(self):
         if not self.prepared:
@@ -230,7 +220,7 @@ class Table(Symbol):
         except Exception as e:
             logger.error(f"Error converting table to pandas: {str(e)}")
             raise
-        
+
     @classmethod
     def from_pandas(cls, df:'pd.DataFrame'):
         logger.debug(f"Creating Table from pandas DataFrame with shape {df.shape}")
@@ -238,13 +228,13 @@ class Table(Symbol):
             self = cls()
             head = THead.from_pandas(df.columns)
             body = TBody.from_pandas(df)
-            
+
             self.head = head
             self.body = body
-            
+
             self.add_child(head)
             self.add_child(body)
-            
+
             logger.debug("Successfully created Table from DataFrame")
             logger.debug(f"Table has {len(self.head.children)} columns and {len(self.body.children)} rows with shape {df.shape}")
             logger.debug(f"Table head: {self.head.to_list()}")
@@ -263,9 +253,7 @@ class THead(Symbol):
     rst = THeadRST()
     md = THeadMD()
 
-
-
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+    def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
         self.table:'Table' = None
         self.data:'list[Tr]' = []
         super().__init__(styles, classes, inner, **props)
@@ -291,8 +279,8 @@ class THead(Symbol):
     @classmethod
     def from_pandas(cls, data:'pd.Index | pd.MultiIndex'):
         self = cls()
-
         self.add_child(Tr.from_pandas(data))
+        return self
 
     @classmethod
     def from_list(cls, data:'list[str]|list[list[str]]'):
@@ -304,24 +292,8 @@ class THead(Symbol):
 
         return self
 
-    def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
-        assert isinstance(table, Table), table
-        print("THEAD")
-        self.table = table
-        self.table.head = self
-
-        if dom is None:
-            dom = []
-        dom.append(self)
-
-        self.prepared = True
-        self.parent = parent
-        for symbol in self.children:
-            print("THEAD", symbol)
-            symbol.prepare(self, dom.copy(), table=table, head=self, *args, **kwargs)
-
-        return self
-
+    def prepare(self, parent: Symbol = None, dom: list[Symbol] = None, table=None, *args, **kwargs):
+        return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 class TBody(Symbol):
     html = "tbody"
     rst = TBodyRST()
@@ -379,12 +351,11 @@ class TBody(Symbol):
         ]
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
-        print("TBODY")
         assert isinstance(table, Table)
 
         self.table = table
         self.table.body = self
-        return super().prepare(parent, dom, table=table, head=self, *args, **kwargs)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 
 class TFoot(Symbol):
     html = "tfoot"
@@ -420,12 +391,11 @@ class TFoot(Symbol):
             raise ImportError("`tables` extra is required to use `from_pandas`")
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
-        print("TFOOT")
         assert isinstance(table, Table)
 
         self.table = table
         self.table.foot = self
-        return super().prepare(parent, dom, table=table, head=self, *args, **kwargs)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 
 class Tr(Symbol):
     html = "tr"
@@ -492,14 +462,13 @@ class Tr(Symbol):
         return self
 
     def prepare(self, parent = None, dom=None, table=None, head:'THead|TBody|TFoot'=None, *args, **kwargs):
-        print(f"TR {parent} {self.children} {self.data}")
         assert isinstance(table, Table)
         assert isinstance(head, (THead, TBody, TFoot))
         self.data = []
         self.table = table
         self.head = head
         self.head.data.append(self)
-        ret = super().prepare(parent, dom, table=table, row=self, head=head, *args, **kwargs)
+        ret = super().prepare(parent, dom, *args, **kwargs, table=table, row=self, head=head)
 
         self.table.widths = [max(len(max(col.data.splitlines(), key=len, default="")), width, 3) for col, width in it.zip_longest(self.data, self.table.widths,  fillvalue=0)]
 
@@ -520,7 +489,7 @@ class Td(Symbol):
     md = TdMD()
     rst = TdRST()
 
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: 'ATTR_TYPES'):
         super().__init__(styles, classes, inner, **props)
         self.row:'Tr' = None
 
@@ -538,7 +507,6 @@ class Td(Symbol):
         self.row = row
 
         self.row.data.append(self)
-        print(self.table.headers)
 
         def op_get(list:'list', i:'int', d):
             try:
@@ -563,15 +531,11 @@ class Th(Symbol):
     # Deprecated
     prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
 
-
     html = "th"
     md = ThMD()
     rst = ThRST()
 
     row:'Tr' = None  
-
-    def __init__(self, styles: dict[str, str] = {}, classes: list[str] = [], inner: list[Symbol] = [], **props):
-        super().__init__(styles, classes, inner, **props)
 
     @property
     def data(self):
@@ -591,7 +555,6 @@ class Th(Symbol):
         return len(self.data)-4
 
     def prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
-        print("TH PREPARED")
         assert isinstance(table, Table)
         self.table = table
         self.row = row
@@ -600,7 +563,6 @@ class Th(Symbol):
         self.header = self
         self.table.cols[self] = []
         self.table.headers.append(self)
-        print("TH")
         return super().prepare(parent, dom, table=table, data=self, *args, **kwargs)
 
     def __len__(self):
