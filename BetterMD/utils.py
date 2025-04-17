@@ -1,5 +1,6 @@
 import typing as t
 import sys
+import logging
 
 if t.TYPE_CHECKING:
     from .elements import Symbol
@@ -46,3 +47,9 @@ def set_recursion_limit(limit):
 
 def get_recursion_limit():
     return sys.getrecursionlimit()
+
+def enable_debug_mode():
+    logger = logging.getLogger("BetterMD")
+    logger.setLevel(1)
+
+    return logger
