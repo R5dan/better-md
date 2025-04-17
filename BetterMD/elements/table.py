@@ -60,8 +60,8 @@ class THeadMD(CustomMarkdown['THead']):
 
         widths = symbol.table.widths
 
-        left = [True if c.styles.get("text-align") in ["center", "left"] else False for c in symbol.table.cols.keys()]
-        right = [True if c.styles.get("text-align") in ["center", "right"] else False for c in symbol.table.cols.keys()]
+        left  = [True if c.styles.get("text-align", "justify") in ["center", "left"] else False for c in symbol.table.cols.keys()]
+        right = [True if c.styles.get("text-align", "justify") in ["center", "right"] else False for c in symbol.table.cols.keys()]
 
         medium = f"| {" | ".join([f"{":" if l else "-"}{'-'*(w-2)}{":" if r else "-"}" for l,r,w in zip(left, right, widths)])} |"
 
@@ -209,7 +209,7 @@ class Table(Symbol):
         self.foot:'TFoot' = None
 
         self.widths = []
-        self.cols: 'dict[Th, list[Td]]' = {}
+        self.cols: 'dict[Th, list[Td | HeadlessTd]]' = {}
         self._headers: 'list[Th]' = []
 
 
@@ -558,12 +558,24 @@ class Td(Symbol):
 
         self.row.data.append(self)
         print(self.table.headers)
-        self.header = self.table.headers[len(self.row.data) - 1]
-        self.table.cols[self.header].append(self)
+
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except:
+                return d
+
+        self.header = op_get(self.table.headers, len(self.row.data) - 1, HeadlessTd())
+        if isinstance(self.header, HeadlessTd):
+            self.table.cols[self.header] = [self]
+        else:
+            self.table.cols[self.header].append(self)
         return super().prepare(parent, dom, table=table, data=self, *args, **kwargs)
 
     def __len__(self):
         return len(self.data)
+
+class HeadlessTd: ...
 
 class Th(Symbol):
     prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
