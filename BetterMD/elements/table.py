@@ -5,6 +5,7 @@ from ..rst import CustomRst
 from .text import Text
 import logging
 import typing as t
+import itertools as it
 
 if t.TYPE_CHECKING:
     # Wont be imported at runtime
@@ -28,7 +29,7 @@ class THeadMD(CustomMarkdown['THead']):
     def to_md(self, inner, symbol, parent, experiments=None, **kwargs):
 
         if experiments is None:
-            experiments = {"multiheader": True}
+            experiments = {}
 
         multi_head = experiments.get("multiheader", False)
 
@@ -127,8 +128,8 @@ class THeadRST(CustomRst['THead']):
         
         widths = symbol.table.widths
 
-        medium = f"+{"+".join(['-'*(l+2) for l in widths])}+"
-        b_medium = f"+{"+".join(['='*(l+2) for l in widths])}+"
+        medium = f"+{"+".join(['-'*(width+2) for width in widths])}+"
+        b_medium = f"+{"+".join(['='*(width+2) for width in widths])}+"
 
         return f"{medium}\n{f"\n{medium}\n".join([handle_row(row, widths) for row in rows])}\n{b_medium}"  
 
@@ -189,20 +190,6 @@ class Table(Symbol):
     html = "table"
     md = TableMD()
     rst = TableRST()
-
-    @property
-    def headers(self):
-        import inspect as i
-        print(i.currentframe().f_back.f_code.co_filename, i.currentframe().f_back.f_lineno)
-        return self._headers
-    
-    @headers.setter
-    def headers(self, value):
-        import inspect as i
-        print("SETTING", i.currentframe().f_back.f_code.co_filename, i.currentframe().f_back.f_lineno)
-
-        self._headers = value
-
     def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
         self.head:'THead' = None
         self.body:'TBody' = None
@@ -210,7 +197,7 @@ class Table(Symbol):
 
         self.widths = []
         self.cols: 'dict[Th, list[Td | HeadlessTd]]' = {}
-        self._headers: 'list[Th]' = []
+        self.headers: 'list[Th]' = []
 
 
         super().__init__(styles, classes, inner, **props)
@@ -223,7 +210,7 @@ class Table(Symbol):
         self.prepared = True
         self.parent = parent
         for symbol in self.children:
-            symbol.prepare(self, dom.copy(), table=self, *args, **kwargs)
+            symbol.prepare(self, *args, **kwargs, dom.copy(), table=self)
 
         return self
 
@@ -514,13 +501,7 @@ class Tr(Symbol):
         self.head.data.append(self)
         ret = super().prepare(parent, dom, table=table, row=self, head=head, *args, **kwargs)
 
-        T = t.TypeVar("T")
-
-        def extend(list:'list[T]', length:'int', char:'T'):
-            l = len(list)
-            return list + [char for _ in range(length-l)]
-
-        self.table.widths = [max(len(max(col.data.splitlines(), key=len, default="")), width, 3) for col, width in zip(self.data, extend(self.table.widths, len(self.data), 0))]
+        self.table.widths = [max(len(max(col.data.splitlines(), key=len, default="")), width, 3) for col, width in it.zip_longest(self.data, self.table.widths,  fillvalue=0)]
 
         return ret
 

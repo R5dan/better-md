@@ -4,7 +4,6 @@ import logging
 if t.TYPE_CHECKING:
     from ..elements import Symbol
 
-logger = logging.getLogger("BetterMD")
 
 class Collection:
     def __init__(self, *symbols:'type[Symbol]'):
