@@ -47,7 +47,7 @@ class THeadMD(CustomMarkdown['THead']):
         def op_get(list:'list', i:'int', d):
             try:
                 return list[i]
-            except:
+            except IndexError:
                 return d
 
         def handle_col(row:'list[list[str]]', i, w:'int') -> 'str':
@@ -60,10 +60,10 @@ class THeadMD(CustomMarkdown['THead']):
 
         widths = symbol.table.widths
 
-        left  = [True if c.styles.get("text-align", "justify") in ["center", "left"] else False for c in symbol.table.cols.keys()]
-        right = [True if c.styles.get("text-align", "justify") in ["center", "right"] else False for c in symbol.table.cols.keys()]
+        left  = [c.styles.get("text-align", "justify") in ["center", "left" ] for c in symbol.table.cols.keys()]
+        right = [c.styles.get("text-align", "justify") in ["center", "right"] for c in symbol.table.cols.keys()]
 
-        medium = f"| {" | ".join([f"{":" if l else "-"}{'-'*(w-2)}{":" if r else "-"}" for l,r,w in zip(left, right, widths)])} |"
+        medium = f"| {" | ".join([f"{":" if is_left else "-"}{'-'*(w-2)}{":" if is_right else "-"}" for is_left, is_right, w in zip(left, right, widths)])} |"
 
         return f"| {" | ".join([handle_col(rows, i, w) for i, w in zip(range(len(max(rows, key=len, default=""))), widths)])} |\n{medium}"  
 
@@ -112,15 +112,15 @@ class THeadRST(CustomRst['THead']):
         def op_get(list:'list', i:'int', d):
             try:
                 return list[i]
-            except:
+            except IndexError:
                 return d
 
-        def handle_row(row:'list[list[str]]', l) -> 'str':
+        def handle_row(row:'list[list[str]]', widths) -> 'str':
             h = len(max(row, key=len))
 
             thead = []
             for i in range(h):
-                thead.append("| " + " | ".join([op_get(d, i, "").center(w) for w, d in zip(l, row)]) + " |")
+                thead.append("| " + " | ".join([op_get(d, i, "").center(w) for w, d in zip(widths, row)]) + " |")
 
             ret = "\n".join(thead)
             return ret
@@ -143,22 +143,22 @@ class TBodyRST(CustomRst['TBody']):
         def op_get(list:'list', i:'int', d):
             try:
                 return list[i]
-            except:
+            except IndexError:
                 return d
 
-        def handle_row(row:'list[list[str]]', l) -> 'str':
+        def handle_row(row:'list[list[str]]', widths) -> 'str':
             h = len(max(row, key=len))
 
             thead = []
             for i in range(h):
-                thead.append("| " + " | ".join([op_get(d, i, "").center(w) for w, d in zip(l, row)]) + " |")
+                thead.append("| " + " | ".join([op_get(d, i, "").center(w) for w, d in zip(widths, row)]) + " |")
 
             ret = "\n".join(thead)
             return ret
         
         widths = symbol.table.widths
 
-        medium = f"+{"+".join(['-'*(l+2) for l in widths])}+"
+        medium = f"+{"+".join(['-'*(w+2) for w in widths])}+"
 
         return f"{f"\n{medium}\n".join([handle_row(row, widths) for row in rows])}\n{medium}"  
 
@@ -194,7 +194,7 @@ class Table(Symbol):
         self.body:'TBody' = None
         self.foot:'TFoot' = None
 
-        self.widths = []
+        self.widths:'list[int]' = []
         self.cols: 'dict[Th, list[Td | HeadlessTd]]' = {}
         self.headers: 'list[Th]' = []
 
@@ -470,15 +470,15 @@ class Tr(Symbol):
         self.head.data.append(self)
         ret = super().prepare(parent, dom, *args, **kwargs, table=table, row=self, head=head)
 
-        self.table.widths = [max(len(max(col.data.splitlines(), key=len, default="")), width, 3) for col, width in it.zip_longest(self.data, self.table.widths,  fillvalue=0)]
+        self.table.widths = [max(len(max(("" if col is None else col.data).splitlines(), key=len, default="")), width or 0, 3) for col, width in it.zip_longest(self.data, self.table.widths,  fillvalue=None)]
 
         return ret
 
     def __str__(self):
-        return f"<tr />"
+        return "<tr />"
 
     def __repr__(self):
-        return f"<tr />"
+        return "<tr />"
 
 class Td(Symbol):
     prop_list = ["colspan", "rowspan", "headers"]
@@ -511,7 +511,7 @@ class Td(Symbol):
         def op_get(list:'list', i:'int', d):
             try:
                 return list[i]
-            except:
+            except IndexError:
                 return d
 
         self.header = op_get(self.table.headers, len(self.row.data) - 1, HeadlessTd())
@@ -519,7 +519,7 @@ class Td(Symbol):
             self.table.cols[self.header] = [self]
         else:
             self.table.cols[self.header].append(self)
-        return super().prepare(parent, dom, table=table, data=self, *args, **kwargs)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
     def __len__(self):
         return len(self.data)
@@ -563,7 +563,7 @@ class Th(Symbol):
         self.header = self
         self.table.cols[self] = []
         self.table.headers.append(self)
-        return super().prepare(parent, dom, table=table, data=self, *args, **kwargs)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
     def __len__(self):
         """Width of the element (data + bolding)"""
