@@ -27,7 +27,7 @@ class LRST(CustomRst):
     def to_rst(self, inner, symbol, parent) -> str:
         if isinstance(parent, LI):
             return "    \n".join([e.to_rst() for e in inner])
-        return " ".join([e.to_rst() for e in inner])
+        return f"\n\n{"\n".join([e.to_rst() for e in inner])}\n\n"
 
 
 class LI(Symbol):

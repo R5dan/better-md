@@ -1,5 +1,6 @@
 import typing as t
 import sys
+import logging
 
 if t.TYPE_CHECKING:
     from .elements import Symbol
@@ -33,16 +34,31 @@ class List(list['Symbol'], t.Generic[T]):
         return super().__iter__()
 
     def to_html(self):
-        return [elm.to_html() for elm in self]
+        ret = [elm.to_html() for elm in self]
+        if len(ret) == 1:
+            return ret[0]
+        return ret
 
     def to_md(self):
-        return [elm.to_md() for elm in self]
+        ret = [elm.to_md() for elm in self]
+        if len(ret) == 1:
+            return ret[0]
+        return ret
 
     def to_rst(self):
-        return [elm.to_rst() for elm in self]
+        ret = [elm.to_rst() for elm in self]
+        if len(ret) == 1:
+            return ret[0]
+        return ret
     
 def set_recursion_limit(limit):
     sys.setrecursionlimit(limit)
 
 def get_recursion_limit():
     return sys.getrecursionlimit()
+
+def enable_debug_mode():
+    logger = logging.getLogger("BetterMD")
+    logger.setLevel(1)
+
+    return logger

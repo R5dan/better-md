@@ -21,7 +21,7 @@ class A(Symbol):
     @classmethod
     def get_ref(cls, name):
         return cls.refs[name]
-    
+
     @classmethod
     def email(cls, email):
         return cls(href=f"mailto:{email}")

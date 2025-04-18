@@ -8,6 +8,6 @@ class RST(CustomRst):
 
 class Blockquote(Symbol):
     html = "blockquote"
-    md = ">"
+    md = "> "
     rst = RST()
     nl = True 

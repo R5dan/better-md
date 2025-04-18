@@ -3,14 +3,15 @@ from ..markdown import CustomMarkdown
 from ..html import CustomHTML
 
 
-# This is not equivelant to the html span or p tags but instead just raw text
+# This is not equivalent to the html span or p tags but instead just raw text
+# Should be ported over to use standard str objects
 
 class Text(Symbol):
     md = "raw_text"
     html = "raw_text"
     rst = "raw_text"
 
-    def __init__(self, text:str, **props):
+    def __init__(self, text:'str'="", **props):
         self.text = text
         return super().__init__(**props)
 
@@ -19,10 +20,10 @@ class Text(Symbol):
 
     def to_md(self):
         return self.text
-    
+
     def to_rst(self):
         return self.text
-    
+
     def __str__(self):
         return self.text
 

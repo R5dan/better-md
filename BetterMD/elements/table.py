@@ -1,105 +1,164 @@
 from .symbol import Symbol
-from ..utils import List
 from ..markdown import CustomMarkdown
 from ..rst import CustomRst
 from .text import Text
+from ..typing import ATTR_TYPES
 import logging
 import typing as t
+import itertools as it
 
 if t.TYPE_CHECKING:
     # Wont be imported at runtime
     import pandas as pd # If not installed, will not affect anything at runtime
 
-
 logger = logging.getLogger("BetterMD")
 T = t.TypeVar("T")
 
-class TrMD(CustomMarkdown['Tr']):
-    def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
-        logger.debug("Converting Tr element to Markdown")
-        contents = "\n".join([e.to_md() for e in inner])
-        split_content = contents.splitlines()
-        logger.debug(f"Split content: {split_content}")
-        ret = f"| {" | ".join(split_content)} |"
-        return ret
-
-
-class THeadMD(CustomMarkdown['THead']):
-    def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
-        md = []
-        for child in symbol.head.children:
-            e = child.to_md()
-
-            md.append({"len":len(e), "style":child.styles.get("text-align", "justify")})
-
-        def parse_md(data: 'dict') -> 'str':
-            start = " :" if data["style"] in ["left", "center"] else " "
-            middle = "-"*(data["len"]-2) if data["style"] == "center" else "-"*(data["len"]-1) if data["style"] in ["left", "right"] else "-"*(data["len"])
-            end = ": " if data["style"] in ["right", "center"] else " "
-
-            return f"{start}{middle}{end}"
-
-        return f"{inner[0].to_md()}\n|{"|".join([parse_md(item) for item in md])}|"
-        
-class TBodyMD(CustomMarkdown['TBody']):
-    def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
-        content = [e.to_md() for e in inner if isinstance(e, Tr)]
-        logger.debug(f"TBody conent: {content}")
-        return "\n".join(content)
-
-class TdMD(CustomMarkdown['Td']):
-    def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
-        if not pretty:
-            return " ".join([e.to_md() for e in inner])
-        
-        length = len(max(symbol.table.cols[symbol.header], key=len).data)
-        logger.debug(f"Td length: {len(symbol)}")
-        logger.debug(f"Column length: {length}")
-        return " ".join([e.to_md() for e in inner]).center(length)
-
-class ThMD(CustomMarkdown['Th']):
-    def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
-        if not pretty:
-            return " ".join([e.to_md() for e in inner])
-        
-        width = len(max(symbol.table.cols[symbol.header], key=len).data)
-
-        
-        if symbol.data == "":
-            return "".center(width)
-        
-        return f"**{" ".join([e.to_md() for e in inner]).center(width)}**"
-    
 class TableMD(CustomMarkdown['Table']):
     def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
         logger.debug("Converting Table element to Markdown")
         head = symbol.head.to_md() if symbol.head else None
-        body = symbol.body.to_md()
+        body = symbol.body.to_md() if symbol.body else None
+        foot = symbol.foot.to_md() if symbol.foot else None
+        logger.debug(f"Table conversion complete. Head: {head is not None}, Body: {body is not None}, Foot: {foot is not None}")
+        return f"{f"{head}\n" if head else ""}{f"{body}\n" if body else ""}{f"{foot}\n" if foot else ""}"
 
-        logger.debug(f"Table conversion complete. Has header: {head is not None}")
-        return f"{f"{head}\n" if head else ""}{body}"
+class THeadMD(CustomMarkdown['THead']):
+    def to_md(self, inner, symbol, parent, experiments=None, **kwargs):
+        if experiments is None:
+            experiments = {}
 
+        multi_head = experiments.get("multiheader", False)
 
+        logger.debug("Converting THead element to RST")
+        logger.debug(f"THead has {len(inner)} children: {[e.to_rst() for e in inner]}")
+
+        if not multi_head and len(symbol.data) > 1:
+            raise ValueError("THead with multiple rows is not supported when `experiments.multiheader` is `False` as it is not standard markdown")
+
+        rows = [
+            [
+                e.to_md().replace("\n", "<br />") for e in row.data
+            ] for row in symbol.data
+        ]
+
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except IndexError:
+                return d
+
+        def handle_col(row:'list[list[str]]', i, w:'int') -> 'str':
+            col:'list[str]' = []
+
+            for r in row:
+                col.append(op_get(r, i, "").center(w))
+            ret = "<hr />".join([e for e in col])
+            return ret
+
+        widths = symbol.table.widths
+
+        left  = [c.styles.get("text-align", "justify") in ["center", "left" ] for c in symbol.table.cols.keys()]
+        right = [c.styles.get("text-align", "justify") in ["center", "right"] for c in symbol.table.cols.keys()]
+
+        medium = f"| {" | ".join([f"{":" if is_left else "-"}{'-'*(w-2)}{":" if is_right else "-"}" for is_left, is_right, w in zip(left, right, widths)])} |"
+
+        return f"| {" | ".join([handle_col(rows, i, w) for i, w in zip(range(len(max(rows, key=len, default=""))), widths)])} |\n{medium}"  
+
+class TBodyMD(CustomMarkdown['TBody']):
+    def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
+        content = [e.to_md() for e in symbol.data]
+        logger.debug(f"TBody content: {content}")
+        return "\n".join(content)
+
+class TrMD(CustomMarkdown['Tr']):
+    def to_md(self, inner, symbol, parent, **kwargs):
+        return f"| {" |\n| ".join(" | ".join([e.to_md().center(w) for e, w in zip(symbol.data, symbol.table.widths)]).split("\n"))} |"
+
+class TdMD(CustomMarkdown['Td']):
+    def to_md(self, inner, symbol, parent, **kwargs):
+        content = " ".join([e.to_md() for e in inner])
+        width = len(max(symbol.table.cols[symbol.header], key=len).data)
+        return content.center(width)
+class ThMD(CustomMarkdown):
+    def to_md(self, inner, symbol, parent):
+        contents = " ".join([e.to_md() for e in inner])
+
+        if contents.strip() == "":
+            return ""
+
+        return f"**{contents}**"
 class TableRST(CustomRst['Table']):
     def to_rst(self, inner, symbol, parent, **kwargs):
         logger.debug("Converting Table element to RST")
-        head = symbol.head.to_rst() if symbol.head else None
-        body = symbol.body.to_rst()
-
-        return f"{f"{head}\n" if head else ""}{body}"
+        head = symbol.head.to_rst() if symbol.head is not None else None
+        body = symbol.body.to_rst() if symbol.body is not None else None
+        foot = symbol.foot.to_rst() if symbol.foot is not None else None
+        return f"{f"{head}\n" if head else ""}{f"{body}\n" if body else ""}{f"{foot}\n" if foot else ""}"
 
 class THeadRST(CustomRst['THead']):
     def to_rst(self, inner, symbol, parent, **kwargs):
         logger.debug("Converting THead element to RST")
         logger.debug(f"THead has {len(inner)} children: {[e.to_rst() for e in inner]}")
-        top = [len(max(symbol.table.cols[child.header], key=len).data) for child in symbol.head.children]
-        content = "\n".join([e.to_rst() for e in inner])
-        return f"+-{"-+-".join([t*"-" for t in top])}-+\n{content}\n+={"=+=".join([t*"=" for t in top])}=+"
     
+        rows = [
+            [
+                e.to_rst().splitlines() for e in row.data
+            ] for row in symbol.data
+        ]
+
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except IndexError:
+                return d
+
+        def handle_row(row:'list[list[str]]', widths) -> 'str':
+            h = len(max(row, key=len))
+
+            thead = []
+            for i in range(h):
+                thead.append("| " + " | ".join([op_get(d, i, "").center(w) for w, d in zip(widths, row)]) + " |")
+
+            ret = "\n".join(thead)
+            return ret
+        
+        widths = symbol.table.widths
+
+        medium = f"+{"+".join(['-'*(width+2) for width in widths])}+"
+        b_medium = f"+{"+".join(['='*(width+2) for width in widths])}+"
+
+        return f"{medium}\n{f"\n{medium}\n".join([handle_row(row, widths) for row in rows])}\n{b_medium}"  
+
 class TBodyRST(CustomRst['TBody']):
     def to_rst(self, inner, symbol, parent, **kwargs):
-        bottom = [len(max(symbol.table.cols[child.header], key=len).data) for child in symbol.table.head.head.children]
-        return f'{f"\n+-{"-+-".join(["-"*b for b in bottom])}-+\n".join([e.to_rst() for e in inner if isinstance(e, Tr)])}\n+-{"-+-".join(["-"*b for b in bottom])}-+'
+        rows = [
+            [
+                e.to_rst().splitlines() for e in row.data
+            ] for row in symbol.data
+        ]
+
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except IndexError:
+                return d
+
+        def handle_row(row:'list[list[str]]', widths) -> 'str':
+            h = len(max(row, key=len))
+
+            thead = []
+            for i in range(h):
+                thead.append("| " + " | ".join([op_get(d, i, "").center(w) for w, d in zip(widths, row)]) + " |")
+
+            ret = "\n".join(thead)
+            return ret
+        
+        widths = symbol.table.widths
+
+        medium = f"+{"+".join(['-'*(w+2) for w in widths])}+"
+
+        return f"{f"\n{medium}\n".join([handle_row(row, widths) for row in rows])}\n{medium}"  
 
 class TrRST(CustomRst['Tr']):
     def to_rst(self, inner, symbol, parent, **kwargs):
@@ -112,22 +171,14 @@ class TdRST(CustomRst['Td']):
         width = len(max(symbol.table.cols[symbol.header], key=len).data)
         return content.center(width)
 
-class ThRST(CustomRst['Th']):
-    def to_rst(self, inner, symbol, parent, **kwargs):
-        content = " ".join([e.to_rst() for e in inner])
-        width = len(max(symbol.table.cols[symbol.header], key=len).data)
-        if content == "":
-            return "".center(width)
-        return f"**{content}**".center(width)
-
 class ThRST(CustomRst):
     def to_rst(self, inner, symbol, parent):
-        return " ".join([e.to_rst() for e in inner])
+        contents = " ".join([e.to_rst() for e in inner])
 
-class TBodyRST(CustomRst):
-    def to_rst(self, inner, symbol, parent):
-        # This is now handled by TableRST
-        return ""
+        if contents.strip() == "":
+            return ""
+
+        return f"**{contents}**"
 
 class Table(Symbol):
     # All deprecated
@@ -136,12 +187,20 @@ class Table(Symbol):
     html = "table"
     md = TableMD()
     rst = TableRST()
-    head:'THead' = None
-    body:'TBody' = None
-    foot:'TFoot' = None
+    def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
+        self.head:'THead' = None
+        self.body:'TBody' = None
+        self.foot:'TFoot' = None
 
-    cols: 'dict[Th, list[Td]]' = {}
-    headers: 'list[Th]' = []
+        self.widths:'list[int]' = []
+        self.cols: 'dict[Th, list[Td | HeadlessTd]]' = {}
+        self.headers: 'list[Th]' = []
+
+
+        super().__init__(styles, classes, inner, **props)
+
+    def prepare(self, parent: Symbol = None, dom: list[Symbol] = None, *args, **kwargs):
+        return super().prepare(parent, dom, *args, **kwargs, table=self)
 
     def to_pandas(self):
         if not self.prepared:
@@ -159,22 +218,21 @@ class Table(Symbol):
         except Exception as e:
             logger.error(f"Error converting table to pandas: {str(e)}")
             raise
-        
+
     @classmethod
     def from_pandas(cls, df:'pd.DataFrame'):
         logger.debug(f"Creating Table from pandas DataFrame with shape {df.shape}")
         try:
-            import pandas as pd
             self = cls()
             head = THead.from_pandas(df.columns)
             body = TBody.from_pandas(df)
-            
+
             self.head = head
             self.body = body
-            
+
             self.add_child(head)
             self.add_child(body)
-            
+
             logger.debug("Successfully created Table from DataFrame")
             logger.debug(f"Table has {len(self.head.children)} columns and {len(self.body.children)} rows with shape {df.shape}")
             logger.debug(f"Table head: {self.head.to_list()}")
@@ -187,18 +245,16 @@ class Table(Symbol):
         except Exception as e:
             logger.error(f"Error creating table from pandas: {str(e)}")
             raise
-    
-    def prepare(self, parent = None, *args, **kwargs):
-        return super().prepare(parent, table=self, *args, **kwargs)
 
 class THead(Symbol):
     html = "thead"
     rst = THeadRST()
     md = THeadMD()
 
-    table:'Table' = None
-    data:'list[Tr]' = None
-
+    def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
+        self.table:'Table' = None
+        self.data:'list[Tr]' = []
+        super().__init__(styles, classes, inner, **props)
 
     def to_pandas(self) -> 'pd.Index':
         import pandas as pd
@@ -221,8 +277,8 @@ class THead(Symbol):
     @classmethod
     def from_pandas(cls, data:'pd.Index | pd.MultiIndex'):
         self = cls()
-
         self.add_child(Tr.from_pandas(data))
+        return self
 
     @classmethod
     def from_list(cls, data:'list[str]|list[list[str]]'):
@@ -234,12 +290,12 @@ class THead(Symbol):
 
         return self
 
-    def prepare(self, parent = None, table=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
+
         self.table = table
         self.table.head = self
-        return super().prepare(parent, table=table, head=self, *args, **kwargs)
-
+        return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 class TBody(Symbol):
     html = "tbody"
     rst = TBodyRST()
@@ -247,6 +303,13 @@ class TBody(Symbol):
 
     table:'Table' = None
     data :'list[Tr]' = []
+
+    def to_rst(self) -> 'str':
+        if isinstance(self.rst, CustomRst):
+            return self.rst.to_rst(self.children, self, self.parent)
+
+        inner_rst = " ".join([e.to_rst() for e in self.children])
+        return f"{self.rst}{inner_rst}{self.rst}\n"
 
     def to_pandas(self):
         if not self.prepared:
@@ -256,7 +319,7 @@ class TBody(Symbol):
         data = [e.to_pandas() for e in self.children]
         logger.debug(f"Converted {len(data)} rows from TBody")
         return data
-    
+
     @classmethod
     def from_pandas(cls, df:'pd.DataFrame'):
         logger.debug(f"Creating TBody from DataFrame with {len(df)} rows")
@@ -272,7 +335,7 @@ class TBody(Symbol):
         except ImportError:
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `from_pandas`")
-        
+
     @classmethod
     def from_list(cls, data:'list[list[str]]'):
         try:
@@ -289,11 +352,12 @@ class TBody(Symbol):
             row.to_list() for row in self.data
         ]
 
-    def prepare(self, parent = None, table=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
+
         self.table = table
         self.table.body = self
-        return super().prepare(parent, table=table, head=self, *args, **kwargs)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 
 class TFoot(Symbol):
     html = "tfoot"
@@ -328,11 +392,12 @@ class TFoot(Symbol):
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `from_pandas`")
 
-    def prepare(self, parent = None, table=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
+
         self.table = table
         self.table.foot = self
-        return super().prepare(parent, table=table, head=self, *args, **kwargs)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 
 class Tr(Symbol):
     html = "tr"
@@ -341,8 +406,7 @@ class Tr(Symbol):
 
     head:'THead|TBody|TFoot' = None
     table:'Table' = None
-    data:'list[t.Union[Td, Th]]' = []
-
+    data:'list[t.Union[Td, Th]]' = None
 
     def to_pandas(self):
         if not self.prepared:
@@ -384,7 +448,6 @@ class Tr(Symbol):
         except ImportError:
             raise ImportError("`tables` extra is required to use `from_pandas`")
 
-
     def to_list(self):
         if not self.prepared:
             self.prepare()
@@ -400,11 +463,24 @@ class Tr(Symbol):
 
         return self
 
-    def prepare(self, parent = None, table=None, head:'THead|TBody|TFoot'=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, head:'THead|TBody|TFoot'=None, *args, **kwargs):
         assert isinstance(table, Table)
+        assert isinstance(head, (THead, TBody, TFoot))
+        self.data = []
         self.table = table
-        if head: self.head = head
-        return super().prepare(parent, table=table, row=self, *args, **kwargs)
+        self.head = head
+        self.head.data.append(self)
+        ret = super().prepare(parent, dom, *args, **kwargs, table=table, row=self, head=head)
+
+        self.table.widths = [max(len(max(("" if col is None else col.data).splitlines(), key=len, default="")), width or 0, 3) for col, width in it.zip_longest(self.data, self.table.widths,  fillvalue=None)]
+
+        return ret
+
+    def __str__(self):
+        return "<tr />"
+
+    def __repr__(self):
+        return "<tr />"
 
 class Td(Symbol):
     prop_list = ["colspan", "rowspan", "headers"]
@@ -415,8 +491,9 @@ class Td(Symbol):
     md = TdMD()
     rst = TdRST()
 
-    children:'List[Text]' = List()
-    row:'Tr' = None
+    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: 'ATTR_TYPES'):
+        super().__init__(styles, classes, inner, **props)
+        self.row:'Tr' = None
 
     @property
     def data(self):
@@ -426,40 +503,47 @@ class Td(Symbol):
     def width(self):
         return len(self.data)
 
-    def prepare(self, parent = None, table=None, row=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.row = row
 
         self.row.data.append(self)
-        self.header = self.table.headers[self.row.children.index(self)]
-        self.table.cols[self.header].append(self)
-        return super().prepare(parent, table=table, data=self, *args, **kwargs)
+
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except IndexError:
+                return d
+
+        self.header = op_get(self.table.headers, len(self.row.data) - 1, HeadlessTd())
+        if isinstance(self.header, HeadlessTd):
+            self.table.cols[self.header] = [self]
+        else:
+            self.table.cols[self.header].append(self)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
     def __len__(self):
         return len(self.data)
+
+class HeadlessTd: ...
 
 class Th(Symbol):
     prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
     # Deprecated
     prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
 
-
     html = "th"
     md = ThMD()
     rst = ThRST()
 
-    children:'List[Text]' = List()
     row:'Tr' = None  
-
-    def __init__(self, styles: dict[str, str] = {}, classes: list[str] = [], dom: bool = True, inner: list[Symbol] = [], **props):
-        super().__init__(styles, classes, dom, inner, **props)
 
     @property
     def data(self):
         contents = self.children.get(0, Text("")).text
         logger.debug(f"Th data: {contents}")
-        if contents == "":
+        if not contents:
             logger.debug("Th data is empty")
             return ""
         logger.debug("Th data is not empty")
@@ -472,15 +556,16 @@ class Th(Symbol):
             return 0
         return len(self.data)-4
 
-    def prepare(self, parent = None, table=None, row=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.row = row
 
         self.row.data.append(self)
         self.header = self
-        self.table.cols[self] = [self]
-        return super().prepare(parent, table=table, data=self, *args, **kwargs)
+        self.table.cols[self] = []
+        self.table.headers.append(self)
+        return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
     def __len__(self):
         """Width of the element (data + bolding)"""

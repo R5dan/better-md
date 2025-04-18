@@ -40,7 +40,7 @@ class Symbol:
 
         self.styles: 'dict[str, str]' = styles
         self.classes: 'list[str]' = classes
-        self.children:'list[Symbol]'  = list(inner) or []
+        self.children:'List[Symbol]'  = List(inner) or List()
         self.props: 'dict[str, ATTR_TYPES]' = props
 
     def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
@@ -77,11 +77,15 @@ class Symbol:
                 return e
         return False
 
-    def prepare(self, parent:'Symbol', *args, **kwargs):
+    def prepare(self, parent:'Symbol'=None, dom:'list[Symbol]' = None, *args, **kwargs):
+        if dom is None:
+            dom = []
+        dom.append(self)
+
         self.prepared = True
         self.parent = parent
         for symbol in self.children:
-            symbol.prepare(self, *args, **kwargs)
+            symbol.prepare(self, dom.copy(), *args, **kwargs)
 
         return self
 
@@ -89,7 +93,7 @@ class Symbol:
         i = self.children.index(old)
         self.children[i] = new
 
-    def handle_props(self, p):
+    def handle_props(self):
         props = {**({"class": self.classes} if self.classes else {}), **({"style": self.styles} if self.styles else {}), **self.props}
         prop_list = []
         for k, v in props.items():
@@ -106,6 +110,9 @@ class Symbol:
         return (" " + " ".join(filter(None, prop_list))) if prop_list else ""
 
     def to_html(self, indent=0) -> 'str':
+        if not self.prepared:
+            self.prepare()
+
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
 
@@ -115,16 +122,19 @@ class Symbol:
         ])
 
         if inner_HTML or not self.self_closing:
-            return f"<{self.html}{self.handle_props(False)}>{inner_HTML}</{self.html}>"
+            return f"<{self.html}{self.handle_props()}>{inner_HTML}</{self.html}>"
         else:
-            return f"<{self.html}{self.handle_props(False)} />"
+            return f"<{self.html}{self.handle_props()} />"
 
     def to_md(self) -> 'str':
+        if not self.prepared:
+            self.prepare()
+
         if isinstance(self.md, CustomMarkdown):
             return self.md.to_md(self.children, self, self.parent)
 
         inner_md = ""
-        
+
         for e in self.children:
             if e.block:
                 inner_md += f"\n{e.to_md()}\n"
@@ -136,6 +146,9 @@ class Symbol:
         return f"{self.md}{inner_md}"
 
     def to_rst(self) -> 'str':
+        if not self.prepared:
+            self.prepare()
+
         if isinstance(self.rst, CustomRst):
             return self.rst.to_rst(self.children, self, self.parent)
 
