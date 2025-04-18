@@ -58,8 +58,8 @@ class THeadMD(CustomMarkdown['THead']):
 
         widths = symbol.table.widths
 
-        left  = [c.styles.get("text-align", "justify") in ["center", "left" ] for c in symbol.table.cols.keys()]
-        right = [c.styles.get("text-align", "justify") in ["center", "right"] for c in symbol.table.cols.keys()]
+        left  = [c.styles.get("text-align", "justify") in ["center", "left" ] for c in symbol.table.cols]
+        right = [c.styles.get("text-align", "justify") in ["center", "right"] for c in symbol.table.cols]
 
         medium = f"| {" | ".join([f"{":" if is_left else "-"}{'-'*(w-2)}{":" if is_right else "-"}" for is_left, is_right, w in zip(left, right, widths)])} |"
 
