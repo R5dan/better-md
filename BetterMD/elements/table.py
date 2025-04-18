@@ -20,13 +20,13 @@ class TableMD(CustomMarkdown['Table']):
         head = symbol.head.to_md() if symbol.head else None
         body = symbol.body.to_md() if symbol.body else None
         foot = symbol.foot.to_md() if symbol.foot else None
-
-        logger.debug(f"Table conversion complete. Has header: {head is not None}")
+        print(f"Table conversion complete. Head: {head is not None}, Body: {body is not None}, Foot: {foot is not None}")
+        logger.debug(f"Table conversion complete. Head: {head is not None}, Body: {body is not None}, Foot: {foot is not None}")
         return f"{f"{head}\n" if head else ""}{f"{body}\n" if body else ""}{f"{foot}\n" if foot else ""}"
 
 class THeadMD(CustomMarkdown['THead']):
     def to_md(self, inner, symbol, parent, experiments=None, **kwargs):
-
+        print("THeadMD")
         if experiments is None:
             experiments = {}
 
@@ -292,7 +292,11 @@ class THead(Symbol):
 
         return self
 
-    def prepare(self, parent: Symbol = None, dom: list[Symbol] = None, table=None, *args, **kwargs):
+    def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
+        assert isinstance(table, Table)
+
+        self.table = table
+        self.table.head = self
         return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
 class TBody(Symbol):
     html = "tbody"
