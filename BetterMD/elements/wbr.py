@@ -4,3 +4,4 @@ class WBR(Symbol):
     html = "wbr"
     md = "" 
     rst = ""
+    self_closing = True

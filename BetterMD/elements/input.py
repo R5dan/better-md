@@ -58,3 +58,4 @@ class Input(Symbol):
     html = "input"
     md = MD()
     rst = RST()
+    self_closing = True

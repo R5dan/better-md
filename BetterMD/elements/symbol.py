@@ -6,6 +6,7 @@ from ..rst import CustomRst
 from ..parse import HTMLParser, MDParser, ELEMENT, TEXT, Collection
 from ..utils import List, set_recursion_limit
 from ..typing import ATTR_TYPES
+from .document import InnerHTML
 
 set_recursion_limit(10000)
 
@@ -30,6 +31,7 @@ class Symbol:
         self.parent:'Symbol' = None
         self.prepared:'bool' = False
         self.html_written_props = ""
+        self.document = InnerHTML(self)
 
         if styles is None:
             styles = {}
@@ -57,19 +59,24 @@ class Symbol:
     def set_parent(self, parent:'Symbol'):
         self.parent = parent
         self.parent.add_child(self)
+        self.prepared = False
 
     def change_parent(self, new_parent:'Symbol'):
         self.set_parent(new_parent)
         self.parent.remove_child(self)
+        self.prepared = False
 
     def add_child(self, symbol:'Symbol'):
         self.children.append(symbol)
+        self.prepared = False
 
     def remove_child(self, symbol:'Symbol'):
         self.children.remove(symbol)
-    
+        self.prepared = False
+
     def extend_children(self, symbols:'list[Symbol]'):
         self.children.extend(symbols)
+        self.prepared = False
 
     def has_child(self, child:'type[Symbol]'):
         for e in self.children:
@@ -84,8 +91,11 @@ class Symbol:
 
         self.prepared = True
         self.parent = parent
-        for symbol in self.children:
-            symbol.prepare(self, dom.copy(), *args, **kwargs)
+
+        [symbol.prepare(self, dom.copy(), *args, **kwargs) for symbol in self.children]
+
+        if self.parent is not None:
+            self.parent.inner_html.add_elm(self)
 
         return self
 
@@ -109,17 +119,14 @@ class Symbol:
                 raise TypeError(f"Unsupported type for prop {k}: {type(v)}")
         return (" " + " ".join(filter(None, prop_list))) if prop_list else ""
 
-    def to_html(self, indent=0) -> 'str':
+    def to_html(self, inner=0) -> 'str':
         if not self.prepared:
             self.prepare()
 
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
 
-        inner_HTML = "\n".join([
-            e.to_html(0) if not (len(self.children) == 1 and isinstance(e.html, str) and e.html == "text") 
-            else e.to_html(0) for e in self.children
-        ])
+        inner_HTML = "\n".join(e.to_html(0) for e in self.children)
 
         if inner_HTML or not self.self_closing:
             return f"<{self.html}{self.handle_props()}>{inner_HTML}</{self.html}>"
@@ -177,19 +184,19 @@ class Symbol:
             assert symbol_cls is not None, "`collection.find_symbol` is broken"
 
             return symbol_cls.parse(element)
-        
+
         if text["type"] == "text":
             return cls.collection.find_symbol("text", raise_errors=True)(text["content"])
 
         # Extract attributes directly from the attributes dictionary
         attributes = text["attributes"]
-        
+
         # Handle class attribute separately if it exists
         classes = []
         if "class" in attributes:
             classes = attributes["class"].split() if isinstance(attributes["class"], str) else attributes["class"]
             del attributes["class"]
-        
+
         # Handle style attribute separately if it exists
         styles = {}
         if "style" in attributes:
@@ -222,5 +229,12 @@ class Symbol:
     
     def __str__(self):
         return f"<{self.html}{self.handle_props()} />"
+    
+    def __repr__(self):
+        return f"<{self.html} />"
 
-    __repr__ = __str__
+    @property
+    def inner_html(self) -> 'InnerHTML':
+        if not self.prepared:
+            self.prepare()
+        return self.document
