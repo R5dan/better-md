@@ -291,9 +291,7 @@ class THead(Symbol):
             self.prepare()
 
         return [
-            [
-                d.data for d in row.data
-            ] for row in self.data
+            row.to_list() for row in self.data
         ]
 
     @classmethod
@@ -416,12 +414,12 @@ class TFoot(Symbol):
         except ImportError:
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `from_pandas`")
-        
+
     def to_list(self):
         if not self.prepared:
             self.prepare()
 
-        return [e.data for e in self.data]
+        return [e.to_list() for e in self.data]
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)

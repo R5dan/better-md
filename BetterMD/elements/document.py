@@ -13,6 +13,7 @@ ARGS = t.ParamSpec("ARGS")
 class GetProtocol(t.Protocol, t.Generic[T1, T2]):
     def get(self, key: 'T1', ) -> 'T2': ...
 
+@t.runtime_checkable
 class CopyProtocol(t.Protocol, t.Generic[T1]):
     def copy(self) -> 'T1': ...
 
@@ -28,7 +29,7 @@ T5 = t.TypeVar("T5", bound=CopyProtocol)
 class Fetcher(t.Generic[T1, T2, T5]):
     def __init__(self, data: 'GetProtocol[T1, T2]', default:'T5'=Copy(None)):
         self.data = data
-        self.default = default.copy()
+        self.default = default.copy() if isinstance(default, CopyProtocol) else default
 
     def __getitem__(self, name:'T1') -> 'T2|T5':
         return self.data.get(name, self.default)
@@ -45,6 +46,13 @@ class InnerHTML:
         self.children_tags: 'dict[type[Symbol], list[Symbol]]' = {}
 
     def add_elm(self, elm:'Symbol'):
+        """
+        Add an element to the children indexes and merge the element's own indexes
+        recursively into aggregate indexes.
+
+        Args:
+            elm: Symbol element to add to the indexes.
+        """
         self.children_ids.setdefault(elm.get_prop("id", None), []).append(elm)
         [self.children_classes.setdefault(c, []).append(elm) for c in elm.classes]
         self.children_tags.setdefault(type(elm), []).append(elm)
