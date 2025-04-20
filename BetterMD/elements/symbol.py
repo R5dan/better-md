@@ -22,11 +22,15 @@ class Symbol:
     html_parser = HTMLParser()
     md_parser = MDParser()
 
+    _cuuid = 0
+
     def __init_subclass__(cls, **kwargs) -> None:
         cls.collection.add_symbols(cls)
         super().__init_subclass__(**kwargs)
 
     def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props:'ATTR_TYPES'):
+        cls = type(self)
+        
         self.parent:'Symbol' = None
         self.prepared:'bool' = False
         self.html_written_props = ""
@@ -43,6 +47,12 @@ class Symbol:
         self.classes: 'list[str]' = classes
         self.children:'List[Symbol]'  = List(inner) or List()
         self.props: 'dict[str, ATTR_TYPES]' = props
+        self.nuuid = cls._cuuid
+        cls._cuuid += 1
+
+    @property
+    def uuid(self):
+        return f"{type(self).__name__}-{self.nuuid}"
 
     def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
         if inner is None:
@@ -228,10 +238,10 @@ class Symbol:
         return item in self.children
 
     def __str__(self):
-        return f"<{self.html}{self.handle_props()} />"
+        return f"<{self.html}{self.handle_props()} {self.nuuid}/>"
+    
 
-    def __repr__(self):
-        return f"<{self.html} />"
+    __repr__ = __str__
 
     @property
     def inner_html(self) -> 'InnerHTML':

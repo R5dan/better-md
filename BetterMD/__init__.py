@@ -4,6 +4,11 @@ from .markdown import CustomMarkdown
 from .rst import CustomRst
 from .parse import HTMLParser, MDParser, Collection
 from .utils import enable_debug_mode
+import typing as _t
+
+if _t.TYPE_CHECKING:
+    class Readable(_t.Protocol):
+        def read(self) -> 'str': ...
 
 class HTML:
     @staticmethod
@@ -11,7 +16,7 @@ class HTML:
         return Symbol.from_html(html)
 
     @staticmethod
-    def from_file(file):
+    def from_file(file: 'Readable'):
         return Symbol.from_html(file.read())
 
     @staticmethod

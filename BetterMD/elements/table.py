@@ -193,9 +193,8 @@ class Table(Symbol):
         self.foot:'TFoot' = None
 
         self.widths:'list[int]' = []
-        self.cols: 'dict[Th, list[Td | HeadlessTd]]' = {}
+        self.cols: 'dict[Th|Td, list[Td | Th | HeadlessTd]]' = {}
         self.headers: 'list[Th]' = []
-
 
         super().__init__(styles, classes, inner, **props)
 
@@ -209,11 +208,27 @@ class Table(Symbol):
         logger.debug("Converting Table to pandas DataFrame")
         try:
             import pandas as pd
-            df = pd.DataFrame([e.to_pandas() for e in self.body.children], columns=self.head.to_pandas())
+            print("HEAD", self.head.to_pandas())
+            if self.head is not None:
+                head = self.head.to_pandas()
+            else:
+                head = []
+
+            if self.body is not None:
+                body = self.body.to_pandas()
+            else:
+                body = []
+
+            if self.foot is not None:
+                foot = self.foot.to_pandas()
+                foot.insert(0, pd.Series([None for _ in range(len(self.cols))], head))
+            else:
+                foot = []
+
+            df = pd.DataFrame(body+foot, columns=head)
             logger.debug(f"Successfully converted table to DataFrame with shape {df.shape}")
             return df
         except ImportError:
-            logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `to_pandas`")
         except Exception as e:
             logger.error(f"Error converting table to pandas: {str(e)}")
@@ -276,28 +291,33 @@ class THead(Symbol):
     def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
         self.table:'Table' = None
         self.data:'list[Tr]' = []
+
         super().__init__(styles, classes, inner, **props)
 
     def to_pandas(self) -> 'pd.Index':
-        import pandas as pd
-        if len(self.data) == 0:
-            pass # Return undefined
+        try:
+            import pandas as pd
+            if len(self.data) == 0:
+                return pd.Index([])
 
-        elif len(self.data) == 1:
-            return pd.Index([d.data for d in self.data])
+            elif len(self.data) == 1:
+                return pd.Index([d.data for d in self.data[0].data])
+            
+            return pd.MultiIndex.from_arrays([[d.data for d in row.data] for row in self.data])
+        except ImportError:
+            logger.error("pandas not installed - tables extra required")
+            raise ImportError("`tables` extra is required to use `to_pandas`")
 
     def to_list(self) -> 'list[list[str]]':
         if not self.prepared:
             self.prepare()
 
-        return [
-            row.to_list() for row in self.data
-        ]
+        return [row.to_list() for row in self.data]
 
     @classmethod
     def from_pandas(cls, data:'pd.Index | pd.MultiIndex'):
         self = cls()
-        self.add_child(Tr.from_pandas(data))
+        self.add_child(Tr.from_pandas(data, head=True))
         return self
 
     @classmethod
@@ -306,7 +326,7 @@ class THead(Symbol):
         if isinstance(data[0], list):
             self.extend_children([Tr.from_list(d, head=True) for d in data])
         else:
-            self.add_child(Tr.from_list(data))
+            self.add_child(Tr.from_list(data, head=True))
 
         return self
 
@@ -316,13 +336,18 @@ class THead(Symbol):
         self.table = table
         self.table.head = self
         return super().prepare(parent, dom, *args, **kwargs, table=table, head=self)
+
 class TBody(Symbol):
     html = "tbody"
     rst = TBodyRST()
     md = TBodyMD()
 
-    table:'Table' = None
-    data :'list[Tr]' = []
+    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+        self.table:'Table' = None
+        self.data :'list[Tr]' = []
+
+        super().__init__(styles, classes, inner, **props)
+
 
     def to_rst(self) -> 'str':
         if isinstance(self.rst, CustomRst):
@@ -331,12 +356,12 @@ class TBody(Symbol):
         inner_rst = " ".join([e.to_rst() for e in self.children])
         return f"{self.rst}{inner_rst}{self.rst}\n"
 
-    def to_pandas(self):
+    def to_pandas(self) -> 'list[pd.Series]':
         if not self.prepared:
             self.prepare()
 
         logger.debug("Converting TBody to pandas format")
-        data = [e.to_pandas() for e in self.children]
+        data = [e.to_pandas() for e in self.data]
         logger.debug(f"Converted {len(data)} rows from TBody")
         return data
 
@@ -371,9 +396,7 @@ class TBody(Symbol):
         if not self.prepared:
             self.prepare()
 
-        return [
-            row.to_list() for row in self.data
-        ]
+        return [row.to_list() for row in self.data]
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
@@ -387,8 +410,12 @@ class TFoot(Symbol):
     md = TBodyMD()
     rst = TBodyRST()
 
-    table:'Table' = None
-    data :'list[Tr]' = []
+
+    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+        self.table:'Table' = None
+        self.data :'list[Tr]' = None
+        
+        super().__init__(styles, classes, inner, **props)
 
     def to_pandas(self):
         if not self.prepared:
@@ -433,9 +460,12 @@ class Tr(Symbol):
     md = TrMD()
     rst = TrRST()
 
-    head:'THead|TBody|TFoot' = None
-    table:'Table' = None
-    data:'list[t.Union[Td, Th]]' = None
+    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+        self.head:'THead|TBody|TFoot' = None
+        self.table:'Table' = None
+        self.data:'list[t.Union[Td, Th]]' = []
+
+        super().__init__(styles, classes, inner, **props)
 
     def to_pandas(self):
         if not self.prepared:
@@ -446,9 +476,11 @@ class Tr(Symbol):
 
         try:
             import pandas as pd
-
+            print("DATA", self)
+            print("TABLE", self.table)
+            print("HEAD", self.table.head)
             return pd.Series(
-                [d for d in self.data],
+                [d.data for d in self.data],
                 self.table.head.to_pandas()
             )
 
@@ -505,21 +537,7 @@ class Tr(Symbol):
 
         return ret
 
-    def __str__(self):
-        return "<tr />"
-
-    def __repr__(self):
-        return "<tr />"
-
-class Td(Symbol):
-    prop_list = ["colspan", "rowspan", "headers"]
-    # Deprecated
-    prop_list +=  ["abbr", "align", "axis", "bgcolor", "char", "charoff", "height", "scope", "valign", "width"]
-
-    html = "td"
-    md = TdMD()
-    rst = TdRST()
-
+class Data(Symbol):
     def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: 'ATTR_TYPES'):
         super().__init__(styles, classes, inner, **props)
         self.row:'Tr' = None
@@ -531,8 +549,13 @@ class Td(Symbol):
     @property
     def width(self):
         return len(self.data)
+    
+    def prepare(self, parent = None, dom=None, table=None, head=None, row=None, *args, **kwargs):
+        if isinstance(head, THead):
+            return self.head_prepare(parent, dom, table, row, *args, **kwargs)
+        return self.data_prepare(parent, dom, table, row, *args, **kwargs)
 
-    def prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
+    def data_prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.row = row
@@ -552,40 +575,7 @@ class Td(Symbol):
             self.table.cols[self.header].append(self)
         return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
-    def __len__(self):
-        return len(self.data)
-
-class HeadlessTd: ...
-
-class Th(Symbol):
-    prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
-    # Deprecated
-    prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
-
-    html = "th"
-    md = ThMD()
-    rst = ThRST()
-
-    row:'Tr' = None  
-
-    @property
-    def data(self):
-        contents = self.children.get(0, Text("")).text
-        logger.debug(f"Th data: {contents}")
-        if not contents:
-            logger.debug("Th data is empty")
-            return ""
-        logger.debug("Th data is not empty")
-        return f"**{contents}**"
-
-    @property
-    def width(self):
-        """Width of the data"""
-        if self.data == "":
-            return 0
-        return len(self.data)-4
-
-    def prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
+    def head_prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):
         assert isinstance(table, Table)
         self.table = table
         self.row = row
@@ -597,5 +587,41 @@ class Th(Symbol):
         return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
     def __len__(self):
-        """Width of the element (data + bolding)"""
         return len(self.data)
+    
+    def __str__(self):
+        return f"<{self.html}{self.handle_props()}>{self.data}</{self.html}>"
+
+    __repr__ = __str__
+
+class Td(Data):
+    prop_list = ["colspan", "rowspan", "headers"]
+    # Deprecated
+    prop_list +=  ["abbr", "align", "axis", "bgcolor", "char", "charoff", "height", "scope", "valign", "width"]
+
+    html = "td"
+    md = TdMD()
+    rst = TdRST()
+
+class HeadlessTd(Data): ...
+
+class Th(Data):
+    prop_list = ["abbr", "colspan","headers", "rowspan", "scope"]
+    # Deprecated
+    prop_list +=  ["align", "axis", "bgcolor", "char", "charoff", "height", "valign", "width"]
+
+    html = "th"
+    md = ThMD()
+    rst = ThRST()
+
+    @property
+    def data(self):
+        contents = super().data
+        if not contents or contents == "":
+            return contents
+        return f"**{contents}**"
+
+    @property
+    def width(self):
+        """Width of the data"""
+        return len(super().data)
