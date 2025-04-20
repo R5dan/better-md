@@ -126,10 +126,7 @@ class Symbol:
         if isinstance(self.html, CustomHTML):
             return self.html.to_html(self.children, self, self.parent)
 
-        inner_HTML = "\n".join([
-            e.to_html(0) if not (len(self.children) == 1 and isinstance(e.html, str) and e.html == "text") 
-            else e.to_html(0) for e in self.children
-        ])
+        inner_HTML = "\n".join(e.to_html(0) for e in self.children)
 
         if inner_HTML or not self.self_closing:
             return f"<{self.html}{self.handle_props()}>{inner_HTML}</{self.html}>"

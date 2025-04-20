@@ -220,6 +220,8 @@ class Table(Symbol):
             raise
 
     def to_list(self):
+        if not self.prepared:
+            self.prepare()
         ret = []
 
         if self.head is not None:
@@ -368,6 +370,9 @@ class TBody(Symbol):
             logger.error(f"Exception occurred in `from_list`: {e}")
 
     def to_list(self):
+        if not self.prepared:
+            self.prepare()
+
         return [
             row.to_list() for row in self.data
         ]
@@ -413,6 +418,9 @@ class TFoot(Symbol):
             raise ImportError("`tables` extra is required to use `from_pandas`")
         
     def to_list(self):
+        if not self.prepared:
+            self.prepare()
+
         return [e.data for e in self.data]
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):

@@ -7,6 +7,7 @@ class Collection:
     def __init__(self, *symbols:'type[Symbol]'):
         self.symbols = list(symbols)
         self.cached = False
+        self.qual_names_cache = {}
 
     @property
     def qual_keys(self):
@@ -32,8 +33,9 @@ class Collection:
     def find_symbol(self, name:'str', raise_errors:'t.Literal[True]') -> 't.Union[type[Symbol], t.NoReturn]': ...
 
     def find_symbol(self, name:'str', raise_errors:'bool'=False):
-        if name in self.qual_keys:
-            return self.qual_keys[name]
+        lname = name.lower()
+        if lname in self.qual_keys:
+            return self.qual_keys[lname]
 
 
         if raise_errors:

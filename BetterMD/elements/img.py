@@ -16,5 +16,5 @@ class Img(Symbol):
     prop_list = ["alt", "attributionsrc", "crossorigin", "decoding", "elementtiming", "fetchpriority", "height", "ismap", "loading", "referrerpolicy", "sizes", "src", "srcset",  "width", "usemap", "align", "border", "hspace", "longdesc", "name", "vspace"]
     md = MD()
     html = "img"
-    rst = RST() 
+    rst = RST()
     self_closing = True

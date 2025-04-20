@@ -11,41 +11,27 @@ T4 = t.TypeVar("T4")
 ARGS = t.ParamSpec("ARGS")
 
 class GetProtocol(t.Protocol, t.Generic[T1, T2]):
-  def get(self, key: 'T1', ) -> 'T2': ...
+    def get(self, key: 'T1', ) -> 'T2': ...
 
-class Fetcher(t.Generic[T1, T2, T3]):
-    def __init__(self, data: 'GetProtocol[T1, T2]', default:'T3'=None):
+class CopyProtocol(t.Protocol, t.Generic[T1]):
+    def copy(self) -> 'T1': ...
+
+class Copy:
+    def __init__(self, data):
         self.data = data
-        self.default = default
+    
+    def copy(self):
+        return self.data
 
-    def __getitem__(self, name:'T1') -> 'T2|T3':
+T5 = t.TypeVar("T5", bound=CopyProtocol)
+
+class Fetcher(t.Generic[T1, T2, T5]):
+    def __init__(self, data: 'GetProtocol[T1, T2]', default:'T5'=Copy(None)):
+        self.data = data
+        self.default = default.copy()
+
+    def __getitem__(self, name:'T1') -> 'T2|T5':
         return self.data.get(name, self.default)
-
-class ElementAccessor:
-    def __init__(self, document: 'InnerHTML'):
-        self.document = document
-
-    def __getattr__(self, name: 'str') -> 'ElementAccessor':
-        if name in ('id', 'class', 'tag'):
-            return ElementAccessor(self.document)
-        raise AttributeError(f"'{name}' is not a valid attribute")
-
-    def __getitem__(self, key: 'str') -> 'list[Symbol]':
-        if hasattr(self, '_last_attr'):
-            if self._last_attr == 'id':
-                return self.document.get_elements_by_id(key)
-            elif self._last_attr == 'class':
-                return self.document.get_elements_by_class_name(key)
-            elif self._last_attr == 'tag':
-                return self.document.get_elements_by_tag_name(key)
-        raise KeyError("No attribute specified for access")
-
-    def __setattr__(self, name: str, value: t.Any) -> None:
-        if name in ('document', '_last_attr'):
-            super().__setattr__(name, value)
-        else:
-            self._last_attr = name
-
 class InnerHTML:
     def __init__(self, inner):
         self.inner = inner
@@ -86,12 +72,8 @@ class InnerHTML:
         return self.tags.get(tag, [])
 
     @property
-    def elements(self):
-        return ElementAccessor(self)
-
-    @property
     def id(self):
-        return Fetcher(self.children_ids)
+        return Fetcher(self.children_ids, [])
 
     @property
     def cls(self):
