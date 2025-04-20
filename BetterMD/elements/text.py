@@ -24,7 +24,7 @@ class Text(Symbol):
     def to_rst(self):
         return self.text
 
-    def __str__(self):
-        return self.text
+    # def __str__(self):
+    #     return self.text
 
-    __repr__ = __str__
+    # __repr__ = __str__

@@ -5,4 +5,5 @@ class Embed(Symbol):
     
     md = ""
     html = "embed"
-    rst = "" 
+    rst = ""
+    self_closing = True

@@ -16,4 +16,5 @@ class Hr(Symbol):
     html = "hr"
     md = MD()
     rst = RST()
-    block = True 
+    block = True
+    self_closing = True

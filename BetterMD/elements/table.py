@@ -219,6 +219,26 @@ class Table(Symbol):
             logger.error(f"Error converting table to pandas: {str(e)}")
             raise
 
+    def to_list(self):
+        ret = []
+
+        if self.head is not None:
+            ret.append(self.head.to_list())
+        else:
+            ret.append([])
+
+        if self.body is not None:
+            ret.append(self.body.to_list())
+        else:
+            ret.append([])
+
+        if self.foot is not None:
+            ret.append(self.foot.to_list())
+        else:
+            ret.append([])
+
+        return ret
+
     @classmethod
     def from_pandas(cls, df:'pd.DataFrame'):
         logger.debug(f"Creating Table from pandas DataFrame with shape {df.shape}")
@@ -391,6 +411,9 @@ class TFoot(Symbol):
         except ImportError:
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `from_pandas`")
+        
+    def to_list(self):
+        return [e.data for e in self.data]
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)

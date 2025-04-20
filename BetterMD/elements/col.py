@@ -13,3 +13,4 @@ class Col(Symbol):
     md = ""
     html = "col"
     rst = ""
+    self_closing = True

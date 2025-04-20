@@ -6,3 +6,4 @@ class Track(Symbol):
     html = "track"
     md = "" 
     rst = ""
+    self_closing = True

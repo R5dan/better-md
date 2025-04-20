@@ -15,14 +15,19 @@ class HTML:
         return Symbol.from_html(file)
 
     @staticmethod
-    def from_url(url):
+    def from_url(url:'str'):
         import requests as r
         text = r.get(url).text
 
         if text.startswith("<!DOCTYPE html>"):
             text = text[15:]
 
-        return Symbol.from_html(text)
+        ret = Symbol.from_html(text)
+
+        if len(ret) == 1:
+            return ret[0]
+
+        return ret
 
 class MD:
     @staticmethod

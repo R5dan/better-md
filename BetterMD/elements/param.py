@@ -6,3 +6,4 @@ class Param(Symbol):
     md = ""
     html = "param"
     rst = ""
+    self_closing = True

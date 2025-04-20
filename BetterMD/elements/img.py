@@ -17,3 +17,4 @@ class Img(Symbol):
     md = MD()
     html = "img"
     rst = RST() 
+    self_closing = True
