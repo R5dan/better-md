@@ -12,7 +12,7 @@ class HTML:
 
     @staticmethod
     def from_file(file):
-        return Symbol.from_html(file)
+        return Symbol.from_html(file.read())
 
     @staticmethod
     def from_url(url:'str'):

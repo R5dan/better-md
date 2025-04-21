@@ -6,4 +6,4 @@ class Meta(Symbol):
     md = ""
     html = "meta"
     rst = ""
-    self_closing = True
+    type = "void"

@@ -46,7 +46,7 @@ class Input(Symbol):
         "popovertarget",
         "popovertargetaction",
         "readonly",
-        "required", 
+        "required",
         "size",
         "src",
         "step",
@@ -58,4 +58,4 @@ class Input(Symbol):
     html = "input"
     md = MD()
     rst = RST()
-    self_closing = True
+    type = "void"

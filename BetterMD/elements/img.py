@@ -6,7 +6,7 @@ from ..rst import CustomRst
 class MD(CustomMarkdown):
     def to_md(self, inner, symbol, parent):
         alt = symbol.get_prop("alt", "")
-        return f"![{alt}]({symbol.get_prop('src')})" 
+        return f"![{alt}]({symbol.get_prop('src')})"
 
 class RST(CustomRst):
     def to_rst(self, inner, symbol, parent):
@@ -17,4 +17,4 @@ class Img(Symbol):
     md = MD()
     html = "img"
     rst = RST()
-    self_closing = True
+    type = "void"

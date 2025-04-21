@@ -6,4 +6,4 @@ class Source(Symbol):
     md = ""
     html = "source"
     rst = ""
-    self_closing = True
+    type = "void"
