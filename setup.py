@@ -3,12 +3,16 @@ from setuptools import setup, find_packages
 VERSION = "0.3.0"
 DESCRIPTION = "A better markdown library"
 
+def read(path):
+    with open(path, "r") as f:
+        return f.read()
+
 setup(
         name="Better-MD", 
         version=VERSION,
         author="R5dan",
         description=DESCRIPTION,
-        long_description=open("README.md").read(),
+        long_description=read("README.md"),
         long_description_content_type="text/markdown",
         packages=find_packages(exclude="tests"),
         install_requires=[],
