@@ -8,7 +8,7 @@ ELEMENT_TYPES:'dict[t.Literal["block", "inline", "void"], list[str]]' = {
         "dl", "dt", "fieldset", "figcaption", "figure", "footer", "form",
         "h1", "h2", "h3", "h4", "h5", "h6", "header", "hgroup", "hr",
         "li", "main", "nav", "noscript", "ol", "p", "pre", "section",
-        "table", "tfoot", "thead", "tbody", "tr", "ul", "video", "blockquote"
+        "table", "tfoot", "thead", "tbody", "tr", "ul", "video"
     ],
     "inline": [
         "a", "abbr", "acronym", "b", "bdi", "bdo", "big", "cite", "code",
