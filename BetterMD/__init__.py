@@ -40,8 +40,8 @@ class MD:
         return Symbol.from_md(md)
 
     @staticmethod
-    def from_file(file):
-        return Symbol.from_md(file)
+    def from_file(file: 'Readable'):
+        return Symbol.from_md(file.read())
 
     @staticmethod
     def from_url(url):
