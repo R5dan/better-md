@@ -6,6 +6,7 @@ from ..typing import ATTR_TYPES
 import logging
 import typing as t
 import itertools as it
+from collections import defaultdict
 
 if t.TYPE_CHECKING:
     # Wont be imported at runtime
@@ -17,11 +18,11 @@ T = t.TypeVar("T")
 class TableMD(CustomMarkdown['Table']):
     def to_md(self, inner, symbol, parent, pretty=True, **kwargs):
         logger.debug("Converting Table element to Markdown")
-        head = symbol.head.to_md() if symbol.head else None
-        body = symbol.body.to_md() if symbol.body else None
-        foot = symbol.foot.to_md() if symbol.foot else None
-        logger.debug(f"Table conversion complete. Head: {head is not None}, Body: {body is not None}, Foot: {foot is not None}")
-        return f"{f"{head}\n" if head else ""}{f"{body}\n" if body else ""}{f"{foot}\n" if foot else ""}"
+        parts = []
+        parts.append(symbol.head.to_md() if symbol.head else None)
+        parts.append(symbol.body.to_md() if symbol.body else None)
+        parts.append(symbol.foot.to_md() if symbol.foot else None)
+        return "\n".join(filter(lambda x: x is not None, parts))
 
 class THeadMD(CustomMarkdown['THead']):
     def to_md(self, inner, symbol, parent, experiments=None, **kwargs):
@@ -193,7 +194,7 @@ class Table(Symbol):
         self.foot:'TFoot' = None
 
         self.widths:'list[int]' = []
-        self.cols: 'dict[Th|Td, list[Td | Th | HeadlessTd]]' = {}
+        self.cols: 'defaultdict[Th|Td|HeadlessTd, list[Td | Th | HeadlessTd]]' = defaultdict(list)
         self.headers: 'list[Th]' = []
 
         super().__init__(styles, classes, inner, **props)
@@ -565,10 +566,7 @@ class Data(Symbol):
                 return d
 
         self.header = op_get(self.table.headers, len(self.row.data) - 1, HeadlessTd())
-        if isinstance(self.header, HeadlessTd):
-            self.table.cols[self.header] = [self]
-        else:
-            self.table.cols[self.header].append(self)
+        self.table.cols[self.header].append(self)
         return super().prepare(parent, dom, *args, **kwargs, table=table, data=self)
 
     def head_prepare(self, parent = None, dom=None, table=None, row=None, *args, **kwargs):

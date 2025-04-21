@@ -6,17 +6,13 @@ from .parse import HTMLParser, MDParser, Collection
 from .utils import enable_debug_mode
 import typing as _t
 
-if _t.TYPE_CHECKING:
-    class Readable(_t.Protocol):
-        def read(self) -> 'str': ...
-
 class HTML:
     @staticmethod
     def from_string(html:'str'):
         return Symbol.from_html(html)
 
     @staticmethod
-    def from_file(file: 'Readable'):
+    def from_file(file: '_t.TextIO'):
         return Symbol.from_html(file.read())
 
     @staticmethod
@@ -40,7 +36,7 @@ class MD:
         return Symbol.from_md(md)
 
     @staticmethod
-    def from_file(file: 'Readable'):
+    def from_file(file: '_t.TextIO'):
         return Symbol.from_md(file.read())
 
     @staticmethod

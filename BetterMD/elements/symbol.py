@@ -8,6 +8,9 @@ from ..utils import List, set_recursion_limit
 from ..typing import ATTR_TYPES
 from .document import InnerHTML
 
+import itertools as it
+
+
 set_recursion_limit(10000)
 
 class Symbol:
@@ -22,10 +25,11 @@ class Symbol:
     html_parser = HTMLParser()
     md_parser = MDParser()
 
-    _cuuid = 0
+    _cuuid:'it.count' = None
 
     def __init_subclass__(cls, **kwargs) -> None:
         cls.collection.add_symbols(cls)
+        cls._cuuid = it.count()
         super().__init_subclass__(**kwargs)
 
     def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props:'ATTR_TYPES'):
@@ -47,8 +51,7 @@ class Symbol:
         self.classes: 'list[str]' = classes
         self.children:'List[Symbol]'  = List(inner) or List()
         self.props: 'dict[str, ATTR_TYPES]' = props
-        self.nuuid = cls._cuuid
-        cls._cuuid += 1
+        self.nuuid = next(cls._cuuid)
 
     @property
     def uuid(self):
