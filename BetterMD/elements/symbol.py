@@ -127,9 +127,10 @@ class Symbol:
 
         inner_HTML = "\n".join(e.to_html(0) for e in self.children)
 
-        if inner_HTML or self.type != "void":
+        if self.type != "void":
             return f"<{self.html}{self.handle_props()}>{inner_HTML}</{self.html}>"
         else:
+            assert not inner_HTML, "Void elements should not have any inner HTML"
             return f"<{self.html}{self.handle_props()} />"
 
     def to_md(self) -> 'str':
