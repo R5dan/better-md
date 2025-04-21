@@ -4,6 +4,11 @@ from .markdown import CustomMarkdown
 from .rst import CustomRst
 from .parse import HTMLParser, MDParser, Collection
 from .utils import enable_debug_mode
+import typing as _t
+
+if _t.TYPE_CHECKING:
+    class Readable(_t.Protocol):
+        def read(self) -> str: ...
 
 class HTML:
     @staticmethod
@@ -11,16 +16,24 @@ class HTML:
         return Symbol.from_html(html)
 
     @staticmethod
-    def from_file(file):
-        return Symbol.from_html(file.read())
+    def from_file(file: 'Readable'):
+        try:
+            text = file.read()
+        except Exception as e:
+            raise IOError(f"Error reading HTML file: {e}")
+
+        return Symbol.from_html(text)
 
     @staticmethod
     def from_url(url:'str'):
-        import requests as r
-        text = r.get(url).text
+        try:
+            import requests as r
+            text = r.get(url).text
 
-        if text.startswith("<!DOCTYPE html>"):
-            text = text[15:]
+            if text.startswith("<!DOCTYPE html>"):
+                text = text[15:]
+        except Exception as e:
+            raise IOError(f"Error reading HTML from URL: {e}")
 
         ret = Symbol.from_html(text)
 
@@ -35,13 +48,23 @@ class MD:
         return Symbol.from_md(md)
 
     @staticmethod
-    def from_file(file):
-        return Symbol.from_md(file)
+    def from_file(file: 'Readable'):
+        try:
+            text = file.read()
+        except Exception as e:
+            raise IOError(f"Error reading Markdown file: {e}")
+
+        return Symbol.from_md(text)
 
     @staticmethod
     def from_url(url):
-        import requests as r
-        text = r.get(url).text
+        try:
+            import requests as r
+            text = r.get(url).text
+        except Exception as e:
+            raise IOError(f"Error reading Markdown from URL: {e}")
+
         return Symbol.from_md(text)
+
 
 __all__ = ["HTML", "MD", "Symbol", "Collection", "HTMLParser", "MDParser", "CustomHTML", "CustomMarkdown", "CustomRst", "enable_debug_mode"]

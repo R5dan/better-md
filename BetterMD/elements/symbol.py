@@ -8,6 +8,9 @@ from ..utils import List, set_recursion_limit
 from ..typing import ATTR_TYPES
 from .document import InnerHTML
 
+import itertools as it
+
+
 set_recursion_limit(10000)
 
 class Symbol:
@@ -22,11 +25,16 @@ class Symbol:
     html_parser = HTMLParser()
     md_parser = MDParser()
 
+    _cuuid:'it.count' = None
+
     def __init_subclass__(cls, **kwargs) -> None:
         cls.collection.add_symbols(cls)
+        cls._cuuid = it.count()
         super().__init_subclass__(**kwargs)
 
     def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props:'ATTR_TYPES'):
+        cls = type(self)
+        
         self.parent:'Symbol' = None
         self.prepared:'bool' = False
         self.html_written_props = ""
@@ -43,6 +51,18 @@ class Symbol:
         self.classes: 'list[str]' = classes
         self.children:'List[Symbol]'  = List(inner) or List()
         self.props: 'dict[str, ATTR_TYPES]' = props
+        self.nuuid = next(cls._cuuid)
+
+    @property
+    def uuid(self):
+        return f"{type(self).__name__}-{self.nuuid}"
+    
+    @property
+    def text(self) -> 'str':
+        if not self.prepared:
+            self.prepare()
+        
+        return "".join([e.text for e in self.children])
 
     def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
         if inner is None:
@@ -228,10 +248,10 @@ class Symbol:
         return item in self.children
 
     def __str__(self):
-        return f"<{self.html}{self.handle_props()} />"
+        return f"<{self.html}({self.nuuid}){self.handle_props()} />"
+    
 
-    def __repr__(self):
-        return f"<{self.html} />"
+    __repr__ = __str__
 
     @property
     def inner_html(self) -> 'InnerHTML':
