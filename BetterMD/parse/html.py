@@ -5,6 +5,7 @@ import re
 
 class HTMLParser:
     NON_PARSING_TAGS = ["script", "style", "textarea", "pre"]
+    WS_RE = re.compile(r"\s+")
 
     def __init__(self):
         self.reset()
@@ -123,19 +124,14 @@ class HTMLParser:
         """
         parent_tag = parent_tag.lower()
         if parent_tag in self.NON_PARSING_TAGS:
-            # Preserve whitespace verbatim
             return text
 
         if self.is_block_element(parent_tag):
-            # Collapse whitespace to single spaces, remove leading/trailing spaces
-            collapsed = re.sub(r'\s+', ' ', text)
+            collapsed = self.WS_RE.sub(" ", text)
             return collapsed.strip()
 
         if self.is_inline_element(parent_tag):
-            # Replace newlines with spaces, collapse other whitespace
-            # Newlines carry over as spaces
-            # So replace all whitespace sequences including newlines with a single space
-            collapsed = re.sub(r'\s+', ' ', text)
+            collapsed = self.WS_RE.sub(" ", text)
             return collapsed
 
         # For unknown tags, default to collapsing whitespace
@@ -164,8 +160,10 @@ class HTMLParser:
         for child in children:
             if child["type"] == "text":
                 content = child["content"]
-                if content.startswith('\n'):
+                if content.startswith("\n"):
                     child["content"] = content[1:]
+                elif content.startswith("\r\n"):
+                    child["content"] = content[2:]
                 break  # Only first text node
 
         # Remove last newline in last text node if present
