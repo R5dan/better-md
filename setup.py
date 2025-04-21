@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = "0.3.0"
+VERSION = "0.3.2"
 DESCRIPTION = "A better markdown library"
 
 def read(path):
