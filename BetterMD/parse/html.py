@@ -113,7 +113,7 @@ class HTMLParser:
         if self.buffer:
             processed_text = self.process_text_node(self.buffer, self.current_tag["name"])
             if processed_text:
-                self.dom.append(self.create_text(processed_text))
+                self.children.append(self.create_text(processed_text))
 
         return self.dom
 
