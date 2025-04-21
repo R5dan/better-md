@@ -14,4 +14,4 @@ class Br(Symbol):
     html = "br"
     md = MD()
     rst = RST()
-    self_closing = True
+    type = "void"

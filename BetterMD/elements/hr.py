@@ -16,5 +16,4 @@ class Hr(Symbol):
     html = "hr"
     md = MD()
     rst = RST()
-    block = True
-    self_closing = True
+    type = "void"  # Changed from block=True and self_closing=True

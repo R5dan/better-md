@@ -2,6 +2,6 @@ from .symbol import Symbol
 
 class WBR(Symbol):
     html = "wbr"
-    md = "" 
+    md = ""
     rst = ""
-    self_closing = True
+    type = "void"

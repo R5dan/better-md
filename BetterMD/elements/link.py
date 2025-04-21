@@ -6,4 +6,4 @@ class Link(Symbol):
     md = ""
     html = "link"
     rst = ""
-    self_closing = True
+    type = "void"

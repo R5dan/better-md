@@ -6,4 +6,4 @@ class Base(Symbol):
     md = ""
     html = "base"
     rst = ""
-    self_closing = True
+    type = "void"

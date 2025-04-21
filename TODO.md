@@ -8,14 +8,10 @@
 -   [x] Add RST support
 -   [ ] Add parsing support
     -   [x] Add HTML parsing
+        -   [ ] Add better whitespace handling
+
     -   [x] Add MD parsing
         -   [x] Add inline support
         -   [x] Add escape chars (\\)
     -   [ ] Add RST parsing
 -   [ ] Add other languages
-
-
-## Inportant
-
-Fix table.py
-Delete this section

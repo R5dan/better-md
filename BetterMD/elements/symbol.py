@@ -16,8 +16,7 @@ class Symbol:
     md: 't.Union[str, CustomMarkdown]' = ""
     rst: 't.Union[str, CustomRst]' = ""
     nl:'bool' = False
-    block: 'bool' = False
-    self_closing: 'bool' = False
+    type: 't.Literal["block", "void", "inline"]' = "inline"
 
     collection = Collection()
     html_parser = HTMLParser()
@@ -128,7 +127,7 @@ class Symbol:
 
         inner_HTML = "\n".join(e.to_html(0) for e in self.children)
 
-        if inner_HTML or not self.self_closing:
+        if inner_HTML or self.type != "void":
             return f"<{self.html}{self.handle_props()}>{inner_HTML}</{self.html}>"
         else:
             return f"<{self.html}{self.handle_props()} />"
@@ -143,7 +142,7 @@ class Symbol:
         inner_md = ""
 
         for e in self.children:
-            if e.block:
+            if e.type == "block":
                 inner_md += f"\n{e.to_md()}\n"
             elif e.nl:
                 inner_md += f"{e.to_md()}\n"
@@ -226,10 +225,10 @@ class Symbol:
         if callable(item):
             return any(isinstance(e, item) for e in self.children)
         return item in self.children
-    
+
     def __str__(self):
         return f"<{self.html}{self.handle_props()} />"
-    
+
     def __repr__(self):
         return f"<{self.html} />"
 

@@ -6,4 +6,4 @@ class Area(Symbol):
     md = ""
     html = "area"
     rst = ""
-    self_closing = True
+    type = "void"
