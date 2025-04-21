@@ -245,7 +245,7 @@ class Symbol:
         return item in self.children
 
     def __str__(self):
-        return f"<{self.html}{self.handle_props()} {self.nuuid}/>"
+        return f"<{self.html}({self.nuuid}){self.handle_props()} />"
     
 
     __repr__ = __str__
