@@ -53,6 +53,13 @@ class Symbol:
     @property
     def uuid(self):
         return f"{type(self).__name__}-{self.nuuid}"
+    
+    @property
+    def text(self) -> 'str':
+        if not self.prepared:
+            self.prepare()
+        
+        return "".join([e.text for e in self.children])
 
     def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
         if inner is None:

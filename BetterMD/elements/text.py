@@ -12,8 +12,12 @@ class Text(Symbol):
     rst = "raw_text"
 
     def __init__(self, text:'str'="", **props):
-        self.text = text
+        self._text = text
         return super().__init__(**props)
+
+    @property
+    def text(self):
+        return self._text
 
     def to_html(self, indent=0):
         return f"{'    '*indent}{self.text}"
