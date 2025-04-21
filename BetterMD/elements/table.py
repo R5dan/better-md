@@ -208,7 +208,6 @@ class Table(Symbol):
         logger.debug("Converting Table to pandas DataFrame")
         try:
             import pandas as pd
-            print("HEAD", self.head.to_pandas())
             if self.head is not None:
                 head = self.head.to_pandas()
             else:
@@ -476,9 +475,6 @@ class Tr(Symbol):
 
         try:
             import pandas as pd
-            print("DATA", self)
-            print("TABLE", self.table)
-            print("HEAD", self.table.head)
             return pd.Series(
                 [d.data for d in self.data],
                 self.table.head.to_pandas()
