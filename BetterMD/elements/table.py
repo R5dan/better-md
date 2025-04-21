@@ -413,7 +413,7 @@ class TFoot(Symbol):
 
     def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
         self.table:'Table' = None
-        self.data :'list[Tr]' = None
+        self.data :'list[Tr]' = []
         
         super().__init__(styles, classes, inner, **props)
 
