@@ -10,6 +10,9 @@ from .document import InnerHTML
 
 import itertools as it
 
+T = t.TypeVar("T", bound=ATTR_TYPES)
+T1 = t.TypeVar("T1", bound=t.Union[ATTR_TYPES, t.Any])
+
 
 set_recursion_limit(10000)
 
@@ -18,7 +21,6 @@ class Symbol:
     prop_list: 'list[str]' = []
     md: 't.Union[str, CustomMarkdown]' = ""
     rst: 't.Union[str, CustomRst]' = ""
-    nl:'bool' = False
     type: 't.Literal["block", "void", "inline"]' = "inline"
 
     collection = Collection()
@@ -32,7 +34,7 @@ class Symbol:
         cls._cuuid = it.count()
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, **props:'ATTR_TYPES'):
+    def __init__(self, inner:'list[Symbol]'=None, **props:'ATTR_TYPES'):
         cls = type(self)
         
         self.parent:'Symbol' = None
@@ -40,18 +42,21 @@ class Symbol:
         self.html_written_props = ""
         self.document = InnerHTML(self)
 
-        if styles is None:
-            styles = {}
-        if classes is None:
-            classes = []
         if inner is None:
             inner = []
 
-        self.styles: 'dict[str, str]' = styles
-        self.classes: 'list[str]' = classes
         self.children:'List[Symbol]'  = List(inner) or List()
         self.props: 'dict[str, ATTR_TYPES]' = props
         self.nuuid = next(cls._cuuid)
+
+    @property
+    def styles(self):
+        return self.props.get("style", {})
+
+    @property
+    def classes(self):
+        return self.props.get("class", [])
+
 
     @property
     def uuid(self):
@@ -64,7 +69,7 @@ class Symbol:
         
         return "".join([e.text for e in self.children])
 
-    def copy(self, styles:'dict[str,str]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None):
+    def copy(self, styles:'dict[str,str]'=None):
         if inner is None:
             inner = []
         if styles is None:
@@ -212,10 +217,10 @@ class Symbol:
         attributes = text["attributes"]
 
         # Handle class attribute separately if it exists
-        classes = []
+        classes:'list[str]' = []
         if "class" in attributes:
             classes = attributes["class"].split() if isinstance(attributes["class"], str) else attributes["class"]
-            del attributes["class"]
+            attributes["class"] = classes
 
         # Handle style attribute separately if it exists
         styles = {}
@@ -225,19 +230,20 @@ class Symbol:
                 styles = dict(item.split(":") for item in style_str.split(";") if ":" in item)
             elif isinstance(style_str, dict):
                 styles = style_str
-            del attributes["style"]
+            attributes["style"] = styles
 
         inner=[handle_element(elm) for elm in text["children"]]
 
         return cls(
-            styles=styles,
-            classes=classes,
             inner=inner,
             **attributes
         )
 
-    def get_prop(self, prop, default=""):
-        return self.props.get(prop, default)
+    def get_prop(self, prop:'str', default: 'T1'=None) -> 'ATTR_TYPES| T1':
+        try:
+            return self.props.get(prop, default) if default is not None else self.props.get(prop)
+        except Exception as e:
+            raise e
 
     def set_prop(self, prop, value):
         self.props[prop] = value

@@ -4,6 +4,6 @@ class Track(Symbol):
     prop_list = ["default", "kind", "label", "src", "srclang"]
 
     html = "track"
-    md = "" 
+    md = ""
     rst = ""
-    self_closing = True
+    type = "void"

@@ -63,7 +63,7 @@ class HTML(CustomHTML['Style']):
 
 
 class Style(Symbol):  
-    def __init__(self, styles:'dict[str, ATTR_TYPES]'=None, classes:'list[str]'=None, inner:'list[Symbol]'=None, *, style: t.Optional[StyleDict] = None, raw: str = "",**props):
+    def __init__(self, *, style: t.Optional[StyleDict] = None, raw: str = "",**props):
         """
         Styles with intuitive nested structure
 
@@ -73,7 +73,7 @@ class Style(Symbol):
             inner: Child symbols
             **props: Additional properties
         """
-        super().__init__(styles, classes, inner, **props)
+        super().__init__(**props)
         self.style: 'StyleDict' = style or {}
         self.raw: 'str' = raw
 
