@@ -188,19 +188,39 @@ class Table(Symbol):
     html = "table"
     md = TableMD()
     rst = TableRST()
-    def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
+    def __init__(self, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
         self.head:'THead' = None
         self.body:'TBody' = None
         self.foot:'TFoot' = None
 
         self.widths:'list[int]' = []
-        self.cols: 'defaultdict[Th|Td|HeadlessTd, list[Td | Th | HeadlessTd]]' = defaultdict(list)
+        self.cols: 'defaultdict[Th|Td|HeadlessTd, list[Td | Th]]' = defaultdict(list)
         self.headers: 'list[Th]' = []
 
-        super().__init__(styles, classes, inner, **props)
+        super().__init__(inner, **props)
+
 
     def prepare(self, parent: Symbol = None, dom: list[Symbol] = None, *args, **kwargs):
         return super().prepare(parent, dom, *args, **kwargs, table=self)
+    
+    def to_dict(self):
+        return {
+            k.data: [d.data for d in v] for k, v in self.cols.items()
+        }
+
+    @classmethod
+    def from_dict(cls, data:'dict[str, list[str]]'):
+        self = cls()
+        head = THead.from_list(list(data.keys()))
+        body = TBody.from_list(list(data.values()))
+
+        self.head = head
+        self.body = body
+
+        self.add_child(head)
+        self.add_child(body)
+
+        return self
 
     def to_pandas(self):
         if not self.prepared:
@@ -234,28 +254,6 @@ class Table(Symbol):
             logger.error(f"Error converting table to pandas: {str(e)}")
             raise
 
-    def to_list(self):
-        if not self.prepared:
-            self.prepare()
-        ret = []
-
-        if self.head is not None:
-            ret.append(self.head.to_list())
-        else:
-            ret.append([])
-
-        if self.body is not None:
-            ret.append(self.body.to_list())
-        else:
-            ret.append([])
-
-        if self.foot is not None:
-            ret.append(self.foot.to_list())
-        else:
-            ret.append([])
-
-        return ret
-
     @classmethod
     def from_pandas(cls, df:'pd.DataFrame'):
         logger.debug(f"Creating Table from pandas DataFrame with shape {df.shape}")
@@ -283,30 +281,73 @@ class Table(Symbol):
             logger.error(f"Error creating table from pandas: {str(e)}")
             raise
 
+    def to_list(self):
+        if not self.prepared:
+            self.prepare()
+        ret = []
+
+        if self.head is not None:
+            ret.append(self.head.to_list())
+        else:
+            ret.append([])
+
+        if self.body is not None:
+            ret.append(self.body.to_list())
+        else:
+            ret.append([])
+
+        if self.foot is not None:
+            ret.append(self.foot.to_list())
+        else:
+            ret.append([])
+
+        return ret
+
+    def from_list(cls, lst:'list[list[list[str] | str]]'):
+        logger.debug(f"Creating Table from list of lists with shape {len(lst)}")
+        self = cls()
+        head = THead.from_list(lst[0])
+        body = TBody.from_list(lst[1])
+        foot = TFoot.from_list(lst[2])
+
+        self.head = head
+        self.body = body
+        self.foot = foot
+
+        return self
+
+
 class THead(Symbol):
     html = "thead"
     rst = THeadRST()
     md = THeadMD()
 
-    def __init__(self, styles: 'dict[str, str]' = None, classes: 'list[str]' = None, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
+    def __init__(self, inner: 'list[Symbol]' = None, **props: 'ATTR_TYPES'):
         self.table:'Table' = None
         self.data:'list[Tr]' = []
 
-        super().__init__(styles, classes, inner, **props)
+        super().__init__(inner, **props)
+    
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
 
     def to_pandas(self) -> 'pd.Index':
         try:
             import pandas as pd
-            if len(self.data) == 0:
-                return pd.Index([])
-
-            elif len(self.data) == 1:
-                return pd.Index([d.data for d in self.data[0].data])
-            
             return pd.MultiIndex.from_arrays([[d.data for d in row.data] for row in self.data])
+
         except ImportError:
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `to_pandas`")
+
+    @classmethod
+    def from_pandas(cls, data:'pd.Index | pd.MultiIndex'):
+        self = cls()
+        self.add_child(Tr.from_pandas(data, head=True))
+        return self
 
     def to_list(self) -> 'list[list[str]]':
         if not self.prepared:
@@ -315,13 +356,7 @@ class THead(Symbol):
         return [row.to_list() for row in self.data]
 
     @classmethod
-    def from_pandas(cls, data:'pd.Index | pd.MultiIndex'):
-        self = cls()
-        self.add_child(Tr.from_pandas(data, head=True))
-        return self
-
-    @classmethod
-    def from_list(cls, data:'list[str]|list[list[str]]'):
+    def from_list(cls, data:'list[list[str] | str]'):
         self = cls()
         if isinstance(data[0], list):
             self.extend_children([Tr.from_list(d, head=True) for d in data])
@@ -342,19 +377,17 @@ class TBody(Symbol):
     rst = TBodyRST()
     md = TBodyMD()
 
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+    def __init__(self, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
         self.table:'Table' = None
         self.data :'list[Tr]' = []
 
-        super().__init__(styles, classes, inner, **props)
+        super().__init__(inner, **props)
 
+    def __len__(self):
+        return len(self.data)
 
-    def to_rst(self) -> 'str':
-        if isinstance(self.rst, CustomRst):
-            return self.rst.to_rst(self.children, self, self.parent)
-
-        inner_rst = " ".join([e.to_rst() for e in self.children])
-        return f"{self.rst}{inner_rst}{self.rst}\n"
+    def __iter__(self):
+        return iter(self.data)
 
     def to_pandas(self) -> 'list[pd.Series]':
         if not self.prepared:
@@ -381,6 +414,12 @@ class TBody(Symbol):
             logger.error("pandas not installed - tables extra required")
             raise ImportError("`tables` extra is required to use `from_pandas`")
 
+    def to_list(self):
+        if not self.prepared:
+            self.prepare()
+
+        return [row.to_list() for row in self.data]
+
     @classmethod
     def from_list(cls, data:'list[list[str]]'):
         try:
@@ -391,12 +430,9 @@ class TBody(Symbol):
 
         except Exception as e:
             logger.error(f"Exception occurred in `from_list`: {e}")
+            raise e
 
-    def to_list(self):
-        if not self.prepared:
-            self.prepare()
-
-        return [row.to_list() for row in self.data]
+        return self
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
@@ -411,18 +447,24 @@ class TFoot(Symbol):
     rst = TBodyRST()
 
 
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+    def __init__(self, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
         self.table:'Table' = None
         self.data :'list[Tr]' = []
         
-        super().__init__(styles, classes, inner, **props)
+        super().__init__(inner, **props)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
 
     def to_pandas(self):
         if not self.prepared:
             self.prepare()
 
         logger.debug("Converting TFoot to pandas format")
-        data = [e.to_pandas() for e in self.children]
+        data = [e.to_pandas() for e in self.data]
         logger.debug(f"Converted {len(data)} rows from TFoot")
         return data
 
@@ -447,6 +489,13 @@ class TFoot(Symbol):
             self.prepare()
 
         return [e.to_list() for e in self.data]
+    
+    @classmethod
+    def from_list(cls, data:'list[list[str]]'):
+        self = cls()
+        for row in data:
+            self.add_child(Tr.from_list(row))
+        return self
 
     def prepare(self, parent = None, dom=None, table=None, *args, **kwargs):
         assert isinstance(table, Table)
@@ -460,12 +509,18 @@ class Tr(Symbol):
     md = TrMD()
     rst = TrRST()
 
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
+    def __init__(self, inner: list[Symbol] = None, **props: str | bool | int | float | list | dict):
         self.head:'THead|TBody|TFoot' = None
         self.table:'Table' = None
         self.data:'list[t.Union[Td, Th]]' = []
 
-        super().__init__(styles, classes, inner, **props)
+        super().__init__(inner, **props)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
 
     def to_pandas(self):
         if not self.prepared:
@@ -535,8 +590,8 @@ class Tr(Symbol):
         return ret
 
 class Data(Symbol):
-    def __init__(self, styles: dict[str, str] = None, classes: list[str] = None, inner: list[Symbol] = None, **props: 'ATTR_TYPES'):
-        super().__init__(styles, classes, inner, **props)
+    def __init__(self, inner: list[Symbol] = None, **props: 'ATTR_TYPES'):
+        super().__init__(inner, **props)
         self.row:'Tr' = None
 
     @property

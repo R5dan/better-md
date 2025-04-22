@@ -1,4 +1,4 @@
-from .elements import *
+from . import elements
 from .html import CustomHTML
 from .markdown import CustomMarkdown
 from .rst import CustomRst
@@ -13,7 +13,7 @@ if _t.TYPE_CHECKING:
 class HTML:
     @staticmethod
     def from_string(html:'str'):
-        return Symbol.from_html(html)
+        return elements.Symbol.from_html(html)
 
     @staticmethod
     def from_file(file: 'Readable'):
@@ -22,7 +22,7 @@ class HTML:
         except Exception as e:
             raise IOError(f"Error reading HTML file: {e}")
 
-        return Symbol.from_html(text)
+        return elements.Symbol.from_html(text)
 
     @staticmethod
     def from_url(url:'str'):
@@ -35,7 +35,7 @@ class HTML:
         except Exception as e:
             raise IOError(f"Error reading HTML from URL: {e}")
 
-        ret = Symbol.from_html(text)
+        ret = elements.Symbol.from_html(text)
 
         if len(ret) == 1:
             return ret[0]
@@ -45,7 +45,7 @@ class HTML:
 class MD:
     @staticmethod
     def from_string(md:'str'):
-        return Symbol.from_md(md)
+        return elements.Symbol.from_md(md)
 
     @staticmethod
     def from_file(file: 'Readable'):
@@ -54,7 +54,7 @@ class MD:
         except Exception as e:
             raise IOError(f"Error reading Markdown file: {e}")
 
-        return Symbol.from_md(text)
+        return elements.Symbol.from_md(text)
 
     @staticmethod
     def from_url(url):
@@ -64,7 +64,7 @@ class MD:
         except Exception as e:
             raise IOError(f"Error reading Markdown from URL: {e}")
 
-        return Symbol.from_md(text)
+        return elements.Symbol.from_md(text)
 
 
-__all__ = ["HTML", "MD", "Symbol", "Collection", "HTMLParser", "MDParser", "CustomHTML", "CustomMarkdown", "CustomRst", "enable_debug_mode"]
+__all__ = ["HTML", "MD", "elements", "Collection", "HTMLParser", "MDParser", "CustomHTML", "CustomMarkdown", "CustomRst", "enable_debug_mode"]
