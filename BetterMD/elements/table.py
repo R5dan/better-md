@@ -578,7 +578,11 @@ class Tr(Symbol):
 
     def prepare(self, parent = None, dom=None, table=None, head:'THead|TBody|TFoot'=None, *args, **kwargs):
         assert isinstance(table, Table)
-        assert isinstance(head, (THead, TBody, TFoot))
+        if not isinstance(head, (THead, TBody, TFoot)):
+            head = TBody()
+            self.change_parent(head)
+            head.change_parent(self)
+
         self.data = []
         self.table = table
         self.head = head
@@ -603,6 +607,16 @@ class Data(Symbol):
         return len(self.data)
     
     def prepare(self, parent = None, dom=None, table=None, head=None, row=None, *args, **kwargs):
+        if not isinstance(row, Tr):
+            row = Tr()
+            self.change_parent(row)
+            if head is None:
+                head = TBody()
+                row.change_parent(head)
+                head.change_parent(table)
+            else:
+                row.change_parent(head)
+
         if isinstance(head, THead):
             return self.head_prepare(parent, dom, table, row, *args, **kwargs)
         return self.data_prepare(parent, dom, table, row, *args, **kwargs)

@@ -86,8 +86,8 @@ class Symbol:
         self.prepared = False
 
     def change_parent(self, new_parent:'Symbol'):
-        self.set_parent(new_parent)
         self.parent.remove_child(self)
+        self.set_parent(new_parent)
         self.prepared = False
 
     def add_child(self, symbol:'Symbol'):
