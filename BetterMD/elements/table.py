@@ -439,7 +439,7 @@ class TBody(Symbol):
 
         except Exception as e:
             logger.error(f"Exception occurred in `from_list`: {e}")
-            raise e from e
+            raise
 
         return self
 
