@@ -210,6 +210,9 @@ class Table(Symbol):
 
     @classmethod
     def from_dict(cls, data:'dict[str, list[str]]'):
+        if not data:
+            return cls()
+
         self = cls()
         head = THead.from_list(list(data.keys()))
         body = TBody.from_list(list(data.values()))
@@ -436,7 +439,7 @@ class TBody(Symbol):
 
         except Exception as e:
             logger.error(f"Exception occurred in `from_list`: {e}")
-            raise e
+            raise e from e
 
         return self
 
