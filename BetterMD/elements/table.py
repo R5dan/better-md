@@ -303,12 +303,18 @@ class Table(Symbol):
 
         return ret
 
+    @classmethod
     def from_list(cls, lst:'list[list[list[str] | str]]'):
         logger.debug(f"Creating Table from list of lists with shape {len(lst)}")
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except IndexError:
+                return d
         self = cls()
-        head = THead.from_list(lst[0])
-        body = TBody.from_list(lst[1])
-        foot = TFoot.from_list(lst[2])
+        head = THead.from_list(op_get(lst, 0, []))
+        body = TBody.from_list(op_get(lst, 1, []))
+        foot = TFoot.from_list(op_get(lst, 2, []))
 
         self.head = head
         self.body = body
