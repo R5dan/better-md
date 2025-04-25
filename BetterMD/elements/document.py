@@ -28,6 +28,7 @@ class Copy:
         return self.data
 
 T5 = t.TypeVar("T5", bound=CopyProtocol)
+HASHABLE_ATTRS = str | bool | int | float | HashableList['HASHABLE_ATTRS'] | HashableDict[str, 'HASHABLE_ATTRS']
 
 class Fetcher(t.Generic[T1, T2, T5]):
     def __init__(self, data: 't.Union[GetProtocol[T1, T2], dict[T1, T2]]', default:'T5'=None):
