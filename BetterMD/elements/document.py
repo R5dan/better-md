@@ -1,4 +1,5 @@
 import typing as t
+from frozendict import frozendict
 
 if t.TYPE_CHECKING:
     from .symbol import Symbol
@@ -10,39 +11,6 @@ T3 = t.TypeVar("T3")
 T4 = t.TypeVar("T4")
 
 ARGS = t.ParamSpec("ARGS")
-
-class HashableList(t.Generic[T1]):
-    def __init__(self, lst:'list[T1]'):
-        self.lst = lst
-
-    def __hash__(self):
-        # Convert list to tuple for hashing
-        return hash(tuple(self.lst))
-
-    def __eq__(self, other):
-        if not isinstance(other, HashableList):
-            return False
-        return self.lst == other.lst
-
-    def __repr__(self):
-        return f"HashableList({self.lst})"
-
-
-class HashableDict(t.Generic[T1, T2]):
-    def __init__(self, dct:'dict[T1, T2]'):
-        self.dct = dct
-
-    def __hash__(self):
-        # Convert list to tuple for hashing
-        return hash(tuple(self.dct.items()))
-
-    def __eq__(self, other):
-        if not isinstance(other, HashableDict):
-            return False
-        return self.dct == other.dct
-
-    def __repr__(self):
-        return f"HashableList({self.dct})"
 
 
 class GetProtocol(t.Protocol, t.Generic[T1, T2]):
@@ -60,12 +28,14 @@ class Copy:
         return self.data
 
 T5 = t.TypeVar("T5", bound=CopyProtocol)
-HASHABLE_ATTRS = str | bool | int | float | HashableList['HASHABLE_ATTRS'] | HashableDict[str, 'HASHABLE_ATTRS']
 
 class Fetcher(t.Generic[T1, T2, T5]):
-    def __init__(self, data: 't.Union[GetProtocol[T1, T2], dict[T1, T2]]', default:'T5'=Copy(None)):
+    def __init__(self, data: 't.Union[GetProtocol[T1, T2], dict[T1, T2]]', default:'T5'=None):
         self.data = data
-        self.default = default.copy() if isinstance(default, CopyProtocol) else default
+        if isinstance(default, CopyProtocol):
+            self.default = default.copy()
+        else:
+            self.default = Copy(default)
 
     def __getitem__(self, name:'T1') -> 'T2|T5':
         if isinstance(self.data, dict):
@@ -75,25 +45,24 @@ class InnerHTML:
     def __init__(self, inner):
         self.inner = inner
 
-        self.ids: 'dict[str|None, list[Symbol]]' = {}
-        self.classes: 'dict[str, list[Symbol]]' = {}
-        self.tags: 'dict[type[Symbol], list[Symbol]]' = {}
-        self.attrs: 'dict[str, dict[HASHABLE_ATTRS, list[Symbol]]]' = {}
-        self.text: 'dict[str, list[Symbol]]' = {}
+        self.ids    : 'dict[str|None, list[Symbol]]'                = {}
+        self.classes: 'dict[str, list[Symbol]]'                     = {}
+        self.tags   : 'dict[type[Symbol], list[Symbol]]'            = {}
+        self.attrs  : 'dict[str, dict[ATTR_TYPES, list[Symbol]]]'   = {}
+        self.text   : 'dict[str, list[Symbol]]'                     = {}
 
-        self.children_ids: 'dict[str|None, list[Symbol]]' = {}
-        self.children_classes: 'dict[str, list[Symbol]]' = {}
-        self.children_tags: 'dict[type[Symbol], list[Symbol]]' = {}
-        self.children_attrs: 'dict[str, dict[str, list[Symbol]]]' = {}
-        self.children_text: 'dict[str, list[Symbol]]' = {}
+        self.children_ids    : 'dict[str|None, list[Symbol]]'       = {}
+        self.children_classes: 'dict[str, list[Symbol]]'            = {}
+        self.children_tags   : 'dict[type[Symbol], list[Symbol]]'   = {}
+        self.children_attrs  : 'dict[str, dict[str, list[Symbol]]]' = {}
+        self.children_text   : 'dict[str, list[Symbol]]'            = {}
 
     def add_elm(self, elm: 'Symbol'):
-        def make_hashable(v):
-            if isinstance(v, list):
-                return HashableList(v)
-            elif isinstance(v, dict):
-                return HashableDict(v)
-            return v
+        def make_hashable(a):
+            if   isinstance(a, list): a = tuple([make_hashable(arg) for arg in a])
+            elif isinstance(a, dict): a = frozendict({k: make_hashable(v) for k, v in a.items()})
+
+            return a
 
         self.children_ids.setdefault(elm.get_prop("id", None), []).append(elm)
         [self.children_classes.setdefault(c, []).append(elm) for c in elm.classes]
@@ -117,15 +86,15 @@ class InnerHTML:
 
         # Normalize keys in elm.props for attrs merging
         normalized_props = {
-            prop: {make_hashable(value): [elm] for value in values}
-            for prop, values in elm.props.items()
+            prop: {make_hashable(value): [elm]}
+            for prop, value in elm.props.items()
         }
 
-        self.ids = concat(self.ids, elm.inner_html.ids, {elm.get_prop("id", None): [elm]})
+        self.ids     = concat(self.ids, elm.inner_html.ids, {elm.get_prop("id", None): [elm]})
         self.classes = concat(self.classes, elm.inner_html.classes, {c: [elm] for c in elm.classes})
-        self.tags = concat(self.tags, elm.inner_html.tags, {type(elm): [elm]})
-        self.attrs = concat(self.attrs, elm.inner_html.attrs, normalized_props)
-        self.text = concat(self.text, elm.inner_html.text, {elm.text: [elm]})
+        self.tags    = concat(self.tags, elm.inner_html.tags, {type(elm): [elm]})
+        self.attrs   = concat(self.attrs, elm.inner_html.attrs, normalized_props)
+        self.text    = concat(self.text, elm.inner_html.text, {elm.text: [elm]})
 
     def get_elements_by_id(self, id: 'str'):
         return self.ids.get(id, [])
@@ -154,7 +123,8 @@ class InnerHTML:
     def get_by_attr(self, attr:'str', value:'str'):
         return self.attrs.get(attr, {}).get(value, [])
 
-    def advanced_find(self, tag:'str', attrs:'dict[t.Literal["text"] | str, str | bool | int | float | tuple[str, str | bool | int | float] | list[str | bool | int | float | tuple[str, str | bool | int | float]]]' = {}):
+    def advanced_find(self, tag:'str', attrs:'dict[t.Literal["text"] | str, str | bool | int | float | tuple[str, str | bool | int | float] | list[str | bool | int | float | tuple[str, str | bool | int | float]]]' = None):
+        attrs = dict(attrs or {})
         def check_attr(e:'Symbol', k:'str', v:'str | bool | int | float | tuple[str, str | bool | int | float]'):
             prop = e.get_prop(k)
             if isinstance(prop, list):
