@@ -210,6 +210,9 @@ class Table(Symbol):
 
     @classmethod
     def from_dict(cls, data:'dict[str, list[str]]'):
+        if not data:
+            return cls()
+
         self = cls()
         head = THead.from_list(list(data.keys()))
         body = TBody.from_list(list(data.values()))
@@ -303,12 +306,18 @@ class Table(Symbol):
 
         return ret
 
+    @classmethod
     def from_list(cls, lst:'list[list[list[str] | str]]'):
         logger.debug(f"Creating Table from list of lists with shape {len(lst)}")
+        def op_get(list:'list', i:'int', d):
+            try:
+                return list[i]
+            except IndexError:
+                return d
         self = cls()
-        head = THead.from_list(lst[0])
-        body = TBody.from_list(lst[1])
-        foot = TFoot.from_list(lst[2])
+        head = THead.from_list(op_get(lst, 0, []))
+        body = TBody.from_list(op_get(lst, 1, []))
+        foot = TFoot.from_list(op_get(lst, 2, []))
 
         self.head = head
         self.body = body
@@ -430,7 +439,7 @@ class TBody(Symbol):
 
         except Exception as e:
             logger.error(f"Exception occurred in `from_list`: {e}")
-            raise e
+            raise
 
         return self
 
@@ -578,7 +587,11 @@ class Tr(Symbol):
 
     def prepare(self, parent = None, dom=None, table=None, head:'THead|TBody|TFoot'=None, *args, **kwargs):
         assert isinstance(table, Table)
-        assert isinstance(head, (THead, TBody, TFoot))
+        if not isinstance(head, (THead, TBody, TFoot)):
+            head = TBody()
+            self.change_parent(head)
+            head.change_parent(self)
+
         self.data = []
         self.table = table
         self.head = head
@@ -603,6 +616,16 @@ class Data(Symbol):
         return len(self.data)
     
     def prepare(self, parent = None, dom=None, table=None, head=None, row=None, *args, **kwargs):
+        if not isinstance(row, Tr):
+            row = Tr()
+            self.change_parent(row)
+            if head is None:
+                head = TBody()
+                row.change_parent(head)
+                head.change_parent(table)
+            else:
+                row.change_parent(head)
+
         if isinstance(head, THead):
             return self.head_prepare(parent, dom, table, row, *args, **kwargs)
         return self.data_prepare(parent, dom, table, row, *args, **kwargs)
